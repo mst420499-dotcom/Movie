@@ -7,7 +7,7 @@ const mongoose = require('mongoose');
 const app = express();
 const PORT = process.env.PORT || 10000;
 
-// 🟢 MongoDB Connection (Render Environment Variable থেকে নেবে)
+// 🟢 MongoDB Connection
 const MONGO_URI = process.env.MONGO_URI;
 
 if (!MONGO_URI) {
@@ -55,7 +55,10 @@ app.set('views', path.join(__dirname, 'views'));
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
+
+// Public এবং Views উভয় ফোল্ডারকেই static হিসেবে সেট করা হলো
 app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'views'))); // 👈 views ফোল্ডারের style.css সার্ভ করার জন্য
 app.use('/uploads', express.static(path.join(__dirname, 'public/uploads')));
 
 app.use(session({
@@ -106,10 +109,9 @@ app.get('/', async (req, res) => {
         const paginatedMovies = movies.slice(startIndex, startIndex + limit);
         const popularMovies = await Movie.find().sort({ views: -1 }).limit(5);
 
-        // Render index_2 instead of index if your file is named index_2.ejs
-        res.render('index_2', {
+        res.render('index', {
             categories: settings.categories || [],
-            selectedCategory: selectedCategory, // Ensure parameter is passed
+            selectedCategory: selectedCategory,
             recentMovies: paginatedMovies,
             popularMovies,
             currentPage: page,
@@ -135,7 +137,7 @@ app.get('/movie/:id', async (req, res) => {
             category: movie.category 
         }).limit(5);
 
-        res.render('movie_2', { movie, relatedMovies });
+        res.render('movie', { movie, relatedMovies });
     } catch (err) {
         res.status(404).send('Invalid Movie ID');
     }
@@ -154,7 +156,7 @@ app.get('/search', async (req, res) => {
             });
         }
 
-        res.render('search_2', {
+        res.render('search', {
             categories: settings.categories || [],
             searchQuery,
             movies: searchResults
@@ -168,7 +170,7 @@ app.get('/search', async (req, res) => {
 
 // Admin Login GET
 app.get('/admin/login', (req, res) => {
-    res.render('login_2', { error: null });
+    res.render('login', { error: null });
 });
 
 // Admin Login POST
@@ -178,7 +180,7 @@ app.post('/admin/login', async (req, res) => {
         req.session.isAdmin = true;
         res.redirect('/admin');
     } else {
-        res.render('login_2', { error: 'Wrong Password!' });
+        res.render('login', { error: 'Wrong Password!' });
     }
 });
 
@@ -194,7 +196,7 @@ app.get('/admin', isAdmin, async (req, res) => {
     const movies = await Movie.find().sort({ createdAt: -1 });
     const movieToEdit = req.query.edit ? await Movie.findById(req.query.edit) : null;
 
-    res.render('admin_2', {
+    res.render('admin', {
         categories: settings.categories || [],
         movies,
         movieToEdit,
