@@ -12,27 +12,24 @@ app.set('views', path.join(__dirname, 'views'));
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// 🟢 Database Connection (আপনার MongoDB URI পরিবর্তন করুন প্রয়োজন অনুযায়ী)
+// Database Connection
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/moviestream';
 mongoose.connect(MONGO_URI)
     .then(() => console.log('MongoDB Connected Successfully'))
     .catch(err => console.error('MongoDB Connection Error:', err));
 
-// 🟢 Mongoose Database Schema & Model
+// Mongoose Schema & Model
 const movieSchema = new mongoose.Schema({
     title: { type: String, required: true },
     poster: { type: String, required: true },
     category: { type: String, required: true },
     contentType: { type: String, enum: ['movie', 'series'], default: 'movie' },
     views: { type: Number, default: 0 },
-    
-    // Single Movies Link Array
+    isPinned: { type: Boolean, default: false },
     videoLinks: [{
-        name: { type: String }, // e.g. "480p", "720p", "Server 1"
+        name: { type: String },
         url: { type: String }
     }],
-    
-    // Web Series Episode List Array
     episodes: [{
         season: { type: Number, default: 1 },
         episodeNumber: { type: Number },
@@ -43,27 +40,28 @@ const movieSchema = new mongoose.Schema({
 
 const Movie = mongoose.model('Movie', movieSchema);
 
-// ================= ROUTING SECTION ================= //
+// ================= ROUTES ================= //
 
-// 1. HOME PAGE ROUTE (5 items per page pagination)
+// 1. HOME PAGE ROUTE (5 items per page)
 app.get('/', async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
-        const limit = 5; // প্রতি পেজে ৫টি আইটেম
+        const limit = 5;
         const skip = (page - 1) * limit;
 
         const totalMovies = await Movie.countDocuments();
         const totalPages = Math.ceil(totalMovies / limit);
 
         const movies = await Movie.find()
-            .sort({ createdAt: -1 })
+            .sort({ isPinned: -1, createdAt: -1 })
             .skip(skip)
             .limit(limit);
 
         res.render('index', {
             movies,
             currentPage: page,
-            totalPages: totalPages
+            totalPages: totalPages,
+            selectedCategory: null
         });
     } catch (err) {
         console.error(err);
@@ -71,11 +69,11 @@ app.get('/', async (req, res) => {
     }
 });
 
-// 2. CATEGORY PAGE ROUTE (5 items per page pagination)
+// 2. CATEGORY PAGE ROUTE (5 items per page)
 app.get('/category/:categoryName', async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
-        const limit = 5; // প্রতি পেজে ৫টি আইটেম
+        const limit = 5;
         const skip = (page - 1) * limit;
         const category = req.params.categoryName;
 
@@ -83,15 +81,15 @@ app.get('/category/:categoryName', async (req, res) => {
         const totalPages = Math.ceil(totalMovies / limit);
 
         const movies = await Movie.find({ category: category })
-            .sort({ createdAt: -1 })
+            .sort({ isPinned: -1, createdAt: -1 })
             .skip(skip)
             .limit(limit);
 
-        res.render('category', {
+        res.render('index', {
             movies,
-            category,
             currentPage: page,
-            totalPages: totalPages
+            totalPages: totalPages,
+            selectedCategory: category
         });
     } catch (err) {
         console.error(err);
@@ -99,10 +97,9 @@ app.get('/category/:categoryName', async (req, res) => {
     }
 });
 
-// 3. MOVIE DETAILS & PLAYER PAGE ROUTE
+// 3. MOVIE DETAILS & PLAYER PAGE
 app.get('/movie/:id', async (req, res) => {
     try {
-        // Increment View Count
         const movie = await Movie.findByIdAndUpdate(
             req.params.id, 
             { $inc: { views: 1 } }, 
@@ -113,7 +110,6 @@ app.get('/movie/:id', async (req, res) => {
             return res.status(404).send("Movie Not Found");
         }
 
-        // Fetch Related Movies (Same category, excluding current movie)
         const relatedMovies = await Movie.find({ 
             category: movie.category, 
             _id: { $ne: movie._id } 
@@ -129,21 +125,22 @@ app.get('/movie/:id', async (req, res) => {
     }
 });
 
-// 4. ADMIN ADD MOVIE FORM (GET)
+// 4. ADMIN ADD FORM
 app.get('/admin/add', (req, res) => {
-    res.render('admin-add'); // Admin EJS form for uploading/adding links
+    res.render('admin-add');
 });
 
-// 5. ADMIN ADD MOVIE API (POST)
+// 5. ADMIN POST API
 app.post('/admin/add', async (req, res) => {
     try {
-        const { title, poster, category, contentType, videoLinks, episodes } = req.body;
+        const { title, poster, category, contentType, isPinned, videoLinks, episodes } = req.body;
 
         const newMovie = new Movie({
             title,
             poster,
             category,
             contentType,
+            isPinned: isPinned === 'on' || isPinned === true,
             videoLinks: videoLinks || [],
             episodes: episodes || []
         });
@@ -156,8 +153,7 @@ app.post('/admin/add', async (req, res) => {
     }
 });
 
-// Start Server
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-    console.log(`Server is running on http://localhost:${PORT}`);
+    console.log(`Server running on http://localhost:${PORT}`);
 });
