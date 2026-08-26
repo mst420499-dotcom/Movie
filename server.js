@@ -5,7 +5,7 @@ const multer = require('multer');
 
 const app = express();
 
-// Body Parser & Static Files
+// Body Parser & Static Files Setup
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.set('view engine', 'ejs');
@@ -13,7 +13,7 @@ app.set('views', path.join(__dirname, 'views'));
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Upload Setup (Multer)
+// Multer Setup for File Uploads
 const storage = multer.diskStorage({
     destination: (req, file, cb) => cb(null, 'uploads/'),
     filename: (req, file, cb) => cb(null, Date.now() + path.extname(file.originalname))
@@ -63,19 +63,43 @@ async function getCategories() {
 
 // ================= FRONTEND ROUTES ================= //
 
-// 🟢 Homepage Route
+// 🟢 Homepage Route (Category Filter + Pagination Fixed)
 app.get('/', async (req, res) => {
     try {
-        const movies = await Movie.find().sort({ isPinned: -1, createdAt: -1 });
+        const page = Math.max(1, parseInt(req.query.page) || 1);
+        const limit = 12; // প্রতি পেজে কতগুলো আইটেম দেখাবে
+        const skip = (page - 1) * limit;
+        const selectedCategory = req.query.category ? req.query.category.trim() : null;
+
+        let query = {};
+        if (selectedCategory && selectedCategory !== 'All') {
+            query.category = selectedCategory;
+        }
+
+        const totalMovies = await Movie.countDocuments(query);
+        const totalPages = Math.ceil(totalMovies / limit) || 1;
+
+        const movies = await Movie.find(query)
+            .sort({ isPinned: -1, createdAt: -1 })
+            .skip(skip)
+            .limit(limit);
+
         const categories = await getCategories();
-        res.render('index', { movies, categories });
+
+        res.render('index', { 
+            movies, 
+            categories, 
+            currentPage: page, 
+            totalPages,
+            selectedCategory: selectedCategory || 'All'
+        });
     } catch (err) {
-        console.error(err);
-        res.status(500).send("Server Error");
+        console.error("Homepage Error:", err);
+        res.status(500).send("Internal Server Error");
     }
 });
 
-// 🟢 Single Movie / Series Details Route (Fixes 'Cannot GET /movie/id')
+// 🟢 Single Movie / Series Details Route
 app.get('/movie/:id', async (req, res) => {
     try {
         const movie = await Movie.findById(req.params.id);
@@ -86,8 +110,8 @@ app.get('/movie/:id', async (req, res) => {
         await movie.save();
         res.render('movie', { movie });
     } catch (err) {
-        console.error(err);
-        res.status(500).send("Server Error");
+        console.error("Movie Details Error:", err);
+        res.status(500).send("Internal Server Error");
     }
 });
 
@@ -113,8 +137,8 @@ app.get('/admin', async (req, res) => {
             err: req.query.err || null
         });
     } catch (err) {
-        console.error(err);
-        res.status(500).send("Server Error");
+        console.error("Admin Dashboard Error:", err);
+        res.status(500).send("Internal Server Error");
     }
 });
 
@@ -128,7 +152,7 @@ app.post('/admin/save-movie', upload.single('posterFile'), async (req, res) => {
             poster = '/uploads/' + req.file.filename;
         }
 
-        // Format Video Links (Movie)
+        // Single Movie Video Links Processing
         let videoLinks = [];
         if (Array.isArray(linkName)) {
             videoLinks = linkName.map((name, index) => ({ name, url: linkUrl[index] })).filter(l => l.url);
@@ -136,7 +160,7 @@ app.post('/admin/save-movie', upload.single('posterFile'), async (req, res) => {
             videoLinks.push({ name: linkName, url: linkUrl });
         }
 
-        // Format Episodes (Series)
+        // Web Series Episodes Processing
         let episodes = [];
         if (Array.isArray(epName)) {
             episodes = epName.map((name, index) => ({
@@ -175,12 +199,12 @@ app.post('/admin/save-movie', upload.single('posterFile'), async (req, res) => {
             res.redirect('/admin?msg=New Content Added Successfully');
         }
     } catch (err) {
-        console.error(err);
+        console.error("Save Content Error:", err);
         res.redirect('/admin?err=Failed to save content');
     }
 });
 
-// 🟢 Toggle Pin
+// 🟢 Toggle Pin/Unpin
 app.post('/admin/toggle-pin/:id', async (req, res) => {
     try {
         const movie = await Movie.findById(req.params.id);
@@ -228,7 +252,7 @@ app.post('/admin/delete-category', async (req, res) => {
     }
 });
 
-// 🟢 Change Admin Password
+// 🟢 Change Password
 app.post('/admin/change-password', async (req, res) => {
     try {
         const { oldPassword, newPassword } = req.body;
@@ -253,6 +277,6 @@ app.get('/admin/logout', (req, res) => {
     res.redirect('/');
 });
 
-// Start Server
+// Start Express Server
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
