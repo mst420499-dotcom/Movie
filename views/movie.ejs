@@ -6,22 +6,46 @@
     <title><%= movie.title %></title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #121212; color: #fff; padding: 20px; }
-        
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+            background: #121212; 
+            color: #ffffff; 
+            padding: 20px 15px; 
+        }
+
         .container { max-width: 900px; margin: 0 auto; }
-        .movie-title { font-size: 24px; margin-bottom: 15px; font-weight: bold; }
+
+        /* Back to Home Link */
+        .back-link { 
+            display: inline-block; 
+            color: #94a3b8; 
+            text-decoration: none; 
+            font-size: 14px; 
+            margin-bottom: 20px; 
+        }
+        .back-link:hover { color: #fff; }
+
+        .movie-title { 
+            font-size: 22px; 
+            font-weight: 700; 
+            margin-bottom: 15px; 
+        }
+
+        /* Video Box Container */
+        .player-card { 
+            background: #1e1e1e; 
+            border-radius: 8px; 
+            overflow: hidden; 
+            margin-bottom: 25px; 
+        }
         
-        /* Video Container */
-        .player-wrapper { 
+        .video-wrapper { 
             position: relative; 
             padding-bottom: 56.25%; /* 16:9 Aspect Ratio */
             height: 0; 
-            overflow: hidden; 
             background: #000; 
-            border-radius: 8px; 
-            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
         }
-        .player-wrapper iframe, .player-wrapper video { 
+        .video-wrapper iframe, .video-wrapper video { 
             position: absolute; 
             top: 0; 
             left: 0; 
@@ -30,121 +54,163 @@
             border: 0; 
         }
 
-        /* Controls Card */
-        .controls-card { 
-            background: #1e1e1e; 
+        /* 5 Sec Skip Control Buttons */
+        .controls-bar { 
+            display: flex; 
+            justify-content: center; 
+            gap: 10px; 
             padding: 12px; 
-            border-radius: 8px; 
-            margin-top: 10px; 
-            text-align: center; 
+            background: #1e1e1e; 
         }
-        .btn-seek { 
+        .btn-skip { 
             background: #e50914; 
-            color: #fff; 
+            color: #ffffff; 
             border: none; 
-            padding: 8px 16px; 
+            padding: 6px 14px; 
             border-radius: 4px; 
+            font-size: 13px; 
             font-weight: bold; 
             cursor: pointer; 
-            margin: 0 5px; 
-            font-size: 13px;
         }
 
-        /* Episodes & Servers Section */
-        .server-section { 
+        /* Details Card */
+        .details-card { 
             background: #1e1e1e; 
-            padding: 15px; 
+            padding: 20px; 
             border-radius: 8px; 
+            margin-bottom: 25px; 
+        }
+        .details-card p { margin-bottom: 8px; font-size: 15px; color: #e2e8f0; }
+        .details-card p strong { color: #ffffff; }
+
+        .server-title { 
+            font-size: 15px; 
+            font-weight: bold; 
             margin-top: 15px; 
+            margin-bottom: 10px; 
+            color: #ffffff; 
         }
-        .server-section h4 { 
-            color: #e50914; 
-            margin-bottom: 12px; 
-            font-size: 16px; 
-        }
-        .btn-group { display: flex; gap: 10px; flex-wrap: wrap; }
-        .server-btn { 
-            background: #2a2a2a; 
-            color: #fff; 
-            border: 1px solid #444; 
-            padding: 8px 15px; 
-            border-radius: 5px; 
+
+        .btn-group { display: flex; gap: 8px; flex-wrap: wrap; }
+        .btn-server { 
+            background: #2d3748; 
+            color: #ffffff; 
+            border: 1px solid #4a5568; 
+            padding: 6px 14px; 
+            border-radius: 4px; 
             cursor: pointer; 
             font-size: 13px; 
-            font-weight: 500;
-            transition: 0.2s;
+            transition: background 0.2s;
         }
-        .server-btn:hover, .server-btn.active { 
-            background: #e50914; 
-            border-color: #e50914; 
+        .btn-server:hover, .btn-server.active { 
+            background: #4a5568; 
+            border-color: #718096; 
         }
 
-        /* Info Card */
-        .info-card { 
-            background: #1e1e1e; 
-            padding: 15px; 
-            border-radius: 8px; 
-            margin-top: 15px; 
-            font-size: 14px;
-            color: #ccc;
+        /* Related Movies Section */
+        .section-title { 
+            font-size: 18px; 
+            font-weight: bold; 
+            margin-bottom: 15px; 
         }
-        .info-card p { margin-bottom: 6px; }
+        
+        .related-grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); 
+            gap: 15px; 
+        }
+
+        .movie-card { 
+            background: #1e1e1e; 
+            border-radius: 6px; 
+            overflow: hidden; 
+            text-decoration: none; 
+            color: #fff; 
+            transition: transform 0.2s;
+            display: block;
+        }
+        .movie-card:hover { transform: translateY(-4px); }
+        .movie-card img { 
+            width: 100%; 
+            height: 180px; 
+            object-fit: cover; 
+            display: block;
+        }
+        .movie-card .info { 
+            padding: 8px; 
+            font-size: 12px; 
+            line-height: 1.3;
+            max-height: 48px;
+            overflow: hidden;
+        }
     </style>
 </head>
 <body>
 
 <div class="container">
+    <!-- Back Button -->
+    <a href="/" class="back-link">← Back to Home</a>
+
     <h1 class="movie-title"><%= movie.title %></h1>
 
-    <!-- Embedded Player -->
-    <div class="player-wrapper">
-        <iframe id="videoPlayer" src="" allowfullscreen allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"></iframe>
+    <!-- Player Box -->
+    <div class="player-card">
+        <div class="video-wrapper">
+            <iframe id="videoPlayer" src="" allowfullscreen allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"></iframe>
+        </div>
+        
+        <div class="controls-bar">
+            <button class="btn-skip" onclick="skipTime(-5)">⏪ 5 Sec</button>
+            <button class="btn-skip" onclick="skipTime(5)">5 Sec ⏩</button>
+        </div>
     </div>
 
-    <!-- 5 Sec Skip Controls -->
-    <div class="controls-card">
-        <button class="btn-seek" onclick="skipTime(-5)">⏪ 5 Sec</button>
-        <button class="btn-seek" onclick="skipTime(5)">5 Sec ⏩</button>
-    </div>
+    <!-- Movie & Server Info Card -->
+    <div class="details-card">
+        <p><strong>Category:</strong> <%= movie.category %></p>
+        <p><strong>Views:</strong> <%= movie.views %></p>
 
-    <!-- Web Series Episodes OR Single Movie Servers -->
-    <div class="server-section">
         <% if (movie.contentType === 'series' && movie.episodes && movie.episodes.length > 0) { %>
-            <h4>📺 Select Episode:</h4>
+            <div class="server-title">Select Episode:</div>
             <div class="btn-group">
                 <% movie.episodes.forEach((ep, idx) => { %>
-                    <button class="server-btn <%= idx === 0 ? 'active' : '' %>" onclick="playMedia(this, '<%= ep.url %>')">
+                    <button class="btn-server <%= idx === 0 ? 'active' : '' %>" onclick="playMedia(this, '<%= ep.url %>')">
                         S<%= ep.season %> E<%= ep.episodeNumber %>: <%= ep.name %>
                     </button>
                 <% }) %>
             </div>
         <% } else if (movie.videoLinks && movie.videoLinks.length > 0) { %>
-            <h4>🎥 Select Server:</h4>
+            <div class="server-title">Select Server:</div>
             <div class="btn-group">
                 <% movie.videoLinks.forEach((link, idx) => { %>
-                    <button class="server-btn <%= idx === 0 ? 'active' : '' %>" onclick="playMedia(this, '<%= link.url %>')">
+                    <button class="btn-server <%= idx === 0 ? 'active' : '' %>" onclick="playMedia(this, '<%= link.url %>')">
                         <%= link.name %>
                     </button>
                 <% }) %>
             </div>
-        <% } else { %>
-            <p style="color: #888;">No stream links available.</p>
         <% } %>
     </div>
 
-    <!-- Meta Details -->
-    <div class="info-card">
-        <p><strong>Category:</strong> <%= movie.category %></p>
-        <p><strong>Views:</strong> <%= movie.views %></p>
-    </div>
+    <!-- Related Movies Grid -->
+    <% if (typeof relatedMovies !== 'undefined' && relatedMovies.length > 0) { %>
+        <h3 class="section-title">Related Movies</h3>
+        <div class="related-grid">
+            <% relatedMovies.forEach(rel => { %>
+                <a href="/movie/<%= rel._id %>" class="movie-card">
+                    <img src="<%= rel.poster %>" alt="<%= rel.title %>">
+                    <div class="info">
+                        <strong><%= rel.title %></strong>
+                    </div>
+                </a>
+            <% }) %>
+        </div>
+    <% } %>
 </div>
 
 <script>
-    // YouTube & Embedded URL Formatter
-    function getEmbedUrl(url) {
+    // Embed and YouTube Link Converter
+    function formatEmbedUrl(url) {
         if (!url) return '';
-        
-        // Convert YouTube Watch Link to Embed Link
         if (url.includes('youtube.com/watch?v=')) {
             const videoId = url.split('v=')[1].split('&')[0];
             return 'https://www.youtube.com/embed/' + videoId + '?autoplay=1';
@@ -153,29 +219,24 @@
             const videoId = url.split('youtu.be/')[1].split('?')[0];
             return 'https://www.youtube.com/embed/' + videoId + '?autoplay=1';
         }
-
-        return url; // External Stream or direct embed links
+        return url;
     }
 
-    function playMedia(button, rawUrl) {
-        const player = document.getElementById('videoPlayer');
-        player.src = getEmbedUrl(rawUrl);
-
-        // Active class update
-        document.querySelectorAll('.server-btn').forEach(b => b.classList.remove('active'));
-        if (button) button.classList.add('active');
+    function playMedia(btn, url) {
+        document.getElementById('videoPlayer').src = formatEmbedUrl(url);
+        document.querySelectorAll('.btn-server').forEach(b => b.classList.remove('active'));
+        if (btn) btn.classList.add('active');
     }
 
-    function skipTime(seconds) {
-        // Embed Player Forward/Rewind Notification
-        alert("Embedded Player (YouTube/External) doesn't allow direct external timeline seek.");
+    function skipTime(sec) {
+        alert("Skipping inside embedded players is managed by the provider.");
     }
 
-    // Auto load first video on page load
+    // Auto-play the first video on page load
     document.addEventListener("DOMContentLoaded", function() {
-        const activeBtn = document.querySelector('.server-btn.active');
-        if (activeBtn) {
-            activeBtn.click();
+        const firstBtn = document.querySelector('.btn-server');
+        if (firstBtn) {
+            firstBtn.click();
         }
     });
 </script>
