@@ -5,14 +5,40 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MOVIEHOUSE - Stream Movies & Series</title>
     <style>
+        /* 🟢 Theme Variables Setup */
+        :root {
+            --bg-body: #090d16;
+            --bg-header: #060910;
+            --bg-card: #121926;
+            --bg-pill: #121926;
+            --text-main: #ffffff;
+            --text-sub: #94a3b8;
+            --border-color: #1e293b;
+            --accent-color: #00bcd4;
+        }
+
+        /* 🟢 Light (Day) Mode Variables */
+        body.light-mode {
+            --bg-body: #f1f5f9;
+            --bg-header: #ffffff;
+            --bg-card: #ffffff;
+            --bg-pill: #e2e8f0;
+            --text-main: #0f172a;
+            --text-sub: #475569;
+            --border-color: #cbd5e1;
+            --accent-color: #00bcd4;
+        }
+
         * { box-sizing: border-box; margin: 0; padding: 0; }
+        
         body { 
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
-            background: #090d16; 
-            color: #ffffff; 
+            background: var(--bg-body); 
+            color: var(--text-main); 
             display: flex;
             flex-direction: column;
             min-height: 100vh;
+            transition: background 0.3s, color 0.3s;
         }
 
         .main-wrapper { flex: 1; padding: 20px 15px; }
@@ -30,27 +56,32 @@
         .logo {
             font-size: 26px;
             font-weight: 900;
-            color: #ffffff;
+            color: var(--text-main);
             text-decoration: none;
             letter-spacing: 1px;
         }
 
-        .logo span { color: #00bcd4; }
+        .logo span { color: var(--accent-color); }
 
+        /* Theme Toggle Button */
         .theme-toggle {
             position: absolute;
             right: 10px;
-            background: #1b2434;
-            border: none;
-            width: 38px;
-            height: 38px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            width: 40px;
+            height: 40px;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
-            color: #ffb74d;
             font-size: 18px;
+            transition: all 0.2s;
+        }
+
+        .theme-toggle:hover {
+            transform: scale(1.05);
         }
 
         /* Search Bar */
@@ -61,10 +92,10 @@
 
         .search-box {
             display: flex;
-            background: #121926;
+            background: var(--bg-card);
             border-radius: 30px;
             padding: 5px 6px 5px 20px;
-            border: 1px solid #1e293b;
+            border: 1px solid var(--border-color);
         }
 
         .search-input {
@@ -72,12 +103,12 @@
             background: transparent;
             border: none;
             outline: none;
-            color: #fff;
+            color: var(--text-main);
             font-size: 14px;
         }
 
         .search-btn {
-            background: #00bcd4;
+            background: var(--accent-color);
             color: #ffffff;
             border: none;
             padding: 10px 24px;
@@ -100,21 +131,21 @@
         }
 
         .cat-btn {
-            background: #121926;
-            color: #94a3b8;
+            background: var(--bg-pill);
+            color: var(--text-sub);
             padding: 8px 18px;
             border-radius: 20px;
             text-decoration: none;
             font-size: 13px;
             font-weight: 600;
-            border: 1px solid #1e293b;
+            border: 1px solid var(--border-color);
             transition: all 0.2s;
         }
 
         .cat-btn:hover, .cat-btn.active {
-            background: #00bcd4;
+            background: var(--accent-color);
             color: #ffffff;
-            border-color: #00bcd4;
+            border-color: var(--accent-color);
         }
 
         /* Section Title */
@@ -124,7 +155,7 @@
             font-weight: 800;
             letter-spacing: 1px;
             margin-bottom: 25px;
-            color: #ffffff;
+            color: var(--text-main);
             text-transform: uppercase;
         }
 
@@ -137,20 +168,20 @@
         }
 
         .movie-card { 
-            background: #121926; 
+            background: var(--bg-card); 
             border-radius: 12px; 
             overflow: hidden; 
             text-decoration: none; 
-            color: #fff; 
+            color: var(--text-main); 
             transition: transform 0.2s, box-shadow 0.2s;
             display: flex;
             flex-direction: column;
-            border: 1px solid #1e293b;
+            border: 1px solid var(--border-color);
         }
 
         .movie-card:hover { 
             transform: translateY(-5px); 
-            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
         }
 
         /* Poster Wrapper */
@@ -171,7 +202,6 @@
             display: block; 
         }
 
-        /* Play Icon Indicator if Poster Image Fails */
         .play-placeholder {
             font-size: 40px;
             color: #ffffff;
@@ -199,13 +229,13 @@
             font-size: 13px; 
             font-weight: 700;
             text-align: center;
-            background: #121926;
+            background: var(--bg-card);
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
         }
 
-        /* Pagination Style (1 2 3 Buttons) */
+        /* Pagination Style */
         .pagination {
             display: flex;
             justify-content: center;
@@ -216,9 +246,9 @@
         }
 
         .page-btn {
-            background: #121926;
-            color: #ffffff;
-            border: 1px solid #1e293b;
+            background: var(--bg-card);
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
             padding: 8px 14px;
             border-radius: 6px;
             text-decoration: none;
@@ -228,18 +258,18 @@
         }
 
         .page-btn:hover, .page-btn.active { 
-            background: #00bcd4; 
-            border-color: #00bcd4; 
+            background: var(--accent-color); 
+            border-color: var(--accent-color); 
             color: #fff; 
         }
 
         /* Footer Style */
         .footer {
-            background: #060910;
+            background: var(--bg-header);
             padding: 20px 0;
             text-align: center;
-            border-top: 1px solid #121926;
-            color: #64748b;
+            border-top: 1px solid var(--border-color);
+            color: var(--text-sub);
             font-size: 13px;
         }
     </style>
@@ -252,7 +282,8 @@
         <!-- Header -->
         <div class="header">
             <a href="/" class="logo">MOVIE<span>HOUSE</span></a>
-            <button class="theme-toggle">☀️</button>
+            <!-- 🟢 Mode Switch Button -->
+            <button class="theme-toggle" id="themeToggleBtn" aria-label="Toggle Theme">☀️</button>
         </div>
 
         <!-- Search Bar -->
@@ -298,7 +329,7 @@
                     </a>
                 <% }) %>
             <% } else { %>
-                <p style="grid-column: 1/-1; text-align: center; color: #64748b;">No movies found.</p>
+                <p style="grid-column: 1/-1; text-align: center; color: var(--text-sub);">No movies found.</p>
             <% } %>
         </div>
 
@@ -345,6 +376,33 @@
 <footer class="footer">
     <p>© MOVIEHOUSE - All Rights Reserved</p>
 </footer>
+
+<!-- 🟢 Dark/Light Mode JavaScript Script -->
+<script>
+    const themeToggleBtn = document.getElementById('themeToggleBtn');
+    
+    // Check saved theme in LocalStorage
+    const currentTheme = localStorage.getItem('theme');
+    if (currentTheme === 'light') {
+        document.body.classList.add('light-mode');
+        themeToggleBtn.textContent = '🌙'; // Light mode active, show Moon icon
+    } else {
+        themeToggleBtn.textContent = '☀️'; // Dark mode active, show Sun icon
+    }
+
+    // Toggle click action
+    themeToggleBtn.addEventListener('click', () => {
+        document.body.classList.toggle('light-mode');
+        
+        if (document.body.classList.contains('light-mode')) {
+            localStorage.setItem('theme', 'light');
+            themeToggleBtn.textContent = '🌙';
+        } else {
+            localStorage.setItem('theme', 'dark');
+            themeToggleBtn.textContent = '☀️';
+        }
+    });
+</script>
 
 </body>
 </html>
