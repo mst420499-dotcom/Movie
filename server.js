@@ -34,7 +34,7 @@ const Movie = mongoose.model('Movie', movieSchema);
 
 // ================= ROUTING SECTION ================= //
 
-// 1. HOME PAGE ROUTE (5 items per page)
+// 1. HOME PAGE ROUTE
 app.get('/', async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
@@ -107,7 +107,7 @@ app.get('/category/:categoryName', async (req, res) => {
     }
 });
 
-// 3. MOVIE DETAILS PAGE
+// 3. MOVIE DETAILS PAGE ROUTE
 app.get('/movie/:id', async (req, res) => {
     try {
         const movie = await Movie.findByIdAndUpdate(
@@ -130,15 +130,9 @@ app.get('/movie/:id', async (req, res) => {
     }
 });
 
-// 🟢 4. SINGLE ADMIN PANEL PAGE ROUTE (/admin)
-app.get('/admin', async (req, res) => {
-    try {
-        const movies = await Movie.find().sort({ createdAt: -1 });
-        res.render('admin', { movies });
-    } catch (err) {
-        console.error(err);
-        res.status(500).send("Server Error");
-    }
+// 🟢 4. ADMIN PANEL ROUTES (/admin & /admin/add)
+app.get(['/admin', '/admin/add'], (req, res) => {
+    res.render('admin');
 });
 
 // 🟢 5. ADMIN ADD MOVIE API
@@ -155,21 +149,10 @@ app.post('/admin/add', async (req, res) => {
         });
 
         await newMovie.save();
-        res.redirect('/admin');
+        res.redirect('/');
     } catch (err) {
         console.error(err);
         res.status(500).send("Failed to save content");
-    }
-});
-
-// 🟢 6. ADMIN DELETE MOVIE API
-app.post('/admin/delete/:id', async (req, res) => {
-    try {
-        await Movie.findByIdAndDelete(req.params.id);
-        res.redirect('/admin');
-    } catch (err) {
-        console.error(err);
-        res.status(500).send("Failed to delete content");
     }
 });
 
