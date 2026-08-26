@@ -3,406 +3,76 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MOVIEHOUSE - Stream Movies & Series</title>
+    <title>Movie Streaming Platform</title>
     <style>
-        /* 🟢 Theme Variables Setup */
-        :root {
-            --bg-body: #090d16;
-            --bg-header: #060910;
-            --bg-card: #121926;
-            --bg-pill: #121926;
-            --text-main: #ffffff;
-            --text-sub: #94a3b8;
-            --border-color: #1e293b;
-            --accent-color: #00bcd4;
-        }
-
-        /* 🟢 Light (Day) Mode Variables */
-        body.light-mode {
-            --bg-body: #f1f5f9;
-            --bg-header: #ffffff;
-            --bg-card: #ffffff;
-            --bg-pill: #e2e8f0;
-            --text-main: #0f172a;
-            --text-sub: #475569;
-            --border-color: #cbd5e1;
-            --accent-color: #00bcd4;
-        }
-
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        
-        body { 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
-            background: var(--bg-body); 
-            color: var(--text-main); 
-            display: flex;
-            flex-direction: column;
-            min-height: 100vh;
-            transition: background 0.3s, color 0.3s;
-        }
-
-        .main-wrapper { flex: 1; padding: 20px 15px; }
+        body { font-family: 'Segoe UI', sans-serif; background: #0f172a; color: #fff; padding: 20px; }
         .container { max-width: 1200px; margin: 0 auto; }
-
-        /* Top Header & Logo */
-        .header {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            position: relative;
-            margin-bottom: 25px;
-        }
-
-        .logo {
-            font-size: 26px;
-            font-weight: 900;
-            color: var(--text-main);
-            text-decoration: none;
-            letter-spacing: 1px;
-        }
-
-        .logo span { color: var(--accent-color); }
-
-        /* Theme Toggle Button */
-        .theme-toggle {
-            position: absolute;
-            right: 10px;
-            background: var(--bg-card);
-            border: 1px solid var(--border-color);
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            font-size: 18px;
-            transition: all 0.2s;
-        }
-
-        .theme-toggle:hover {
-            transform: scale(1.05);
-        }
-
-        /* Search Bar */
-        .search-container {
-            max-width: 550px;
-            margin: 0 auto 30px auto;
-        }
-
-        .search-box {
-            display: flex;
-            background: var(--bg-card);
-            border-radius: 30px;
-            padding: 5px 6px 5px 20px;
-            border: 1px solid var(--border-color);
-        }
-
-        .search-input {
-            width: 100%;
-            background: transparent;
-            border: none;
-            outline: none;
-            color: var(--text-main);
-            font-size: 14px;
-        }
-
-        .search-btn {
-            background: var(--accent-color);
-            color: #ffffff;
-            border: none;
-            padding: 10px 24px;
-            border-radius: 25px;
-            cursor: pointer;
-            font-weight: 700;
-            font-size: 14px;
-            transition: background 0.2s;
-        }
-
-        .search-btn:hover { background: #00acc1; }
-
-        /* Category Pill Buttons Navigation */
-        .category-nav {
-            display: flex;
-            justify-content: center;
-            gap: 10px;
-            margin-bottom: 40px;
-            flex-wrap: wrap;
-        }
-
-        .cat-btn {
-            background: var(--bg-pill);
-            color: var(--text-sub);
-            padding: 8px 18px;
-            border-radius: 20px;
-            text-decoration: none;
-            font-size: 13px;
-            font-weight: 600;
-            border: 1px solid var(--border-color);
-            transition: all 0.2s;
-        }
-
-        .cat-btn:hover, .cat-btn.active {
-            background: var(--accent-color);
-            color: #ffffff;
-            border-color: var(--accent-color);
-        }
-
-        /* Section Title */
-        .section-title {
-            text-align: center;
-            font-size: 15px;
-            font-weight: 800;
-            letter-spacing: 1px;
-            margin-bottom: 25px;
-            color: var(--text-main);
-            text-transform: uppercase;
-        }
-
-        /* Movie Grid Layout */
-        .movie-grid { 
-            display: grid; 
-            grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); 
-            gap: 18px; 
-            margin-bottom: 40px;
-        }
-
-        .movie-card { 
-            background: var(--bg-card); 
-            border-radius: 12px; 
-            overflow: hidden; 
-            text-decoration: none; 
-            color: var(--text-main); 
-            transition: transform 0.2s, box-shadow 0.2s;
-            display: flex;
-            flex-direction: column;
-            border: 1px solid var(--border-color);
-        }
-
-        .movie-card:hover { 
-            transform: translateY(-5px); 
-            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
-        }
-
-        /* Poster Wrapper */
-        .poster-wrapper {
-            position: relative;
-            width: 100%;
-            height: 270px;
-            background: #0a0e17;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .poster-wrapper img { 
-            width: 100%; 
-            height: 100%; 
-            object-fit: cover; 
-            display: block; 
-        }
-
-        .play-placeholder {
-            font-size: 40px;
-            color: #ffffff;
-            opacity: 0.8;
-        }
-
-        /* Views Badge Overlay */
-        .views-badge {
-            position: absolute;
-            bottom: 8px;
-            right: 10px;
-            background: rgba(0, 0, 0, 0.7);
-            padding: 2px 8px;
-            border-radius: 10px;
-            color: #ffffff;
-            font-size: 11px;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 4px;
-        }
-
-        .movie-card .info { 
-            padding: 14px 10px; 
-            font-size: 13px; 
-            font-weight: 700;
-            text-align: center;
-            background: var(--bg-card);
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        /* Pagination Style */
-        .pagination {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 8px;
-            margin-bottom: 50px;
-            flex-wrap: wrap;
-        }
-
-        .page-btn {
-            background: var(--bg-card);
-            color: var(--text-main);
-            border: 1px solid var(--border-color);
-            padding: 8px 14px;
-            border-radius: 6px;
-            text-decoration: none;
-            font-size: 13px;
-            font-weight: bold;
-            transition: all 0.2s;
-        }
-
-        .page-btn:hover, .page-btn.active { 
-            background: var(--accent-color); 
-            border-color: var(--accent-color); 
-            color: #fff; 
-        }
-
-        /* Footer Style */
-        .footer {
-            background: var(--bg-header);
-            padding: 20px 0;
-            text-align: center;
-            border-top: 1px solid var(--border-color);
-            color: var(--text-sub);
-            font-size: 13px;
-        }
+        .navbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; flex-wrap: wrap; gap: 10px; }
+        .categories { display: flex; gap: 8px; flex-wrap: wrap; }
+        .cat-btn { padding: 6px 12px; background: #1e293b; color: #94a3b8; text-decoration: none; border-radius: 6px; font-size: 13px; }
+        .cat-btn.active { background: #10b981; color: #fff; font-weight: bold; }
+        .movie-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        .card { background: #1e293b; border-radius: 8px; overflow: hidden; position: relative; transition: transform 0.2s; }
+        .card:hover { transform: translateY(-5px); }
+        .card img { width: 100%; height: 260px; object-fit: cover; }
+        .card-body { padding: 12px; }
+        .card-title { font-size: 15px; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 5px; }
+        .card-meta { font-size: 12px; color: #94a3b8; }
+        .pin-badge { position: absolute; top: 8px; left: 8px; background: #f59e0b; color: #000; font-size: 10px; font-weight: bold; padding: 3px 6px; border-radius: 4px; }
+        
+        .pagination { display: flex; justify-content: center; align-items: center; gap: 10px; margin-top: 20px; }
+        .page-btn { padding: 8px 16px; background: #3b82f6; color: #fff; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 14px; }
+        .page-btn.disabled { background: #334155; color: #64748b; pointer-events: none; }
+        .page-info { font-size: 14px; color: #94a3b8; }
     </style>
 </head>
 <body>
 
-<div class="main-wrapper">
-    <div class="container">
-        
-        <!-- Header -->
-        <div class="header">
-            <a href="/" class="logo">MOVIE<span>HOUSE</span></a>
-            <!-- 🟢 Mode Switch Button -->
-            <button class="theme-toggle" id="themeToggleBtn" aria-label="Toggle Theme">☀️</button>
+<div class="container">
+    <div class="navbar">
+        <h2>🎬 Movie Hub</h2>
+        <div class="categories">
+            <a href="/?page=1" class="cat-btn <%= selectedCategory === 'All' ? 'active' : '' %>">All</a>
+            <% categories.forEach(cat => { %>
+                <a href="/?category=<%= encodeURIComponent(cat) %>&page=1" class="cat-btn <%= selectedCategory === cat ? 'active' : '' %>"><%= cat %></a>
+            <% }) %>
         </div>
-
-        <!-- Search Bar -->
-        <div class="search-container">
-            <form action="/" method="GET" class="search-box">
-                <input type="text" name="search" class="search-input" placeholder="Search movies..." value="<%= searchQuery %>">
-                <button type="submit" class="search-btn">Search</button>
-            </form>
-        </div>
-
-        <% const activeCat = typeof selectedCategory !== 'undefined' ? selectedCategory : null; %>
-        
-        <!-- Categories Navigation Pill Bar -->
-        <div class="category-nav">
-            <a href="/" class="cat-btn <%= !activeCat ? 'active' : '' %>">All Movies</a>
-            <a href="/category/Bangladeshi" class="cat-btn <%= activeCat === 'Bangladeshi' ? 'active' : '' %>">Bangladeshi</a>
-            <a href="/category/Kolkata Bangla" class="cat-btn <%= activeCat === 'Kolkata Bangla' ? 'active' : '' %>">Kolkata Bangla</a>
-            <a href="/category/Hindi" class="cat-btn <%= activeCat === 'Hindi' ? 'active' : '' %>">Hindi</a>
-            <a href="/category/Tamil" class="cat-btn <%= activeCat === 'Tamil' ? 'active' : '' %>">Tamil</a>
-            <a href="/category/English" class="cat-btn <%= activeCat === 'English' ? 'active' : '' %>">English</a>
-            <a href="/category/MCU" class="cat-btn <%= activeCat === 'MCU' ? 'active' : '' %>">MCU</a>
-            <a href="/category/MCU WEB" class="cat-btn <%= activeCat === 'MCU WEB' ? 'active' : '' %>">MCU WEB</a>
-            <a href="/category/DCU" class="cat-btn <%= activeCat === 'DCU' ? 'active' : '' %>">DCU</a>
-            <a href="/category/Web Series" class="cat-btn <%= activeCat === 'Web Series' ? 'active' : '' %>">Web Series</a>
-            <a href="/category/Natok" class="cat-btn <%= activeCat === 'Natok' ? 'active' : '' %>">Natok</a>
-        </div>
-
-        <!-- RECENTLY UPDATED SECTION -->
-        <h2 class="section-title">RECENTLY UPDATED</h2>
-        <div class="movie-grid">
-            <% if (movies && movies.length > 0) { %>
-                <% movies.forEach(movie => { %>
-                    <a href="/movie/<%= movie._id %>" class="movie-card">
-                        <div class="poster-wrapper">
-                            <% if(movie.poster) { %>
-                                <img src="<%= movie.poster %>" alt="<%= movie.title %>">
-                            <% } else { %>
-                                <div class="play-placeholder">▶</div>
-                            <% } %>
-                            <span class="views-badge">👁 <%= movie.views || 0 %></span>
-                        </div>
-                        <div class="info"><%= movie.title %></div>
-                    </a>
-                <% }) %>
-            <% } else { %>
-                <p style="grid-column: 1/-1; text-align: center; color: var(--text-sub);">No movies found.</p>
-            <% } %>
-        </div>
-
-        <!-- Pagination Bar -->
-        <% if (totalPages > 1) { %>
-            <% const baseUrl = activeCat ? '/category/' + activeCat : ''; %>
-            <div class="pagination">
-                <% if (currentPage > 1) { %>
-                    <a href="<%= baseUrl %>?page=<%= currentPage - 1 %>" class="page-btn">« Prev</a>
-                <% } %>
-                <% for(let i = 1; i <= totalPages; i++) { %>
-                    <a href="<%= baseUrl %>?page=<%= i %>" class="page-btn <%= currentPage === i ? 'active' : '' %>"><%= i %></a>
-                <% } %>
-                <% if (currentPage < totalPages) { %>
-                    <a href="<%= baseUrl %>?page=<%= currentPage + 1 %>" class="page-btn">Next »</a>
-                <% } %>
-            </div>
-        <% } %>
-
-        <!-- POPULAR MOVIES SECTION -->
-        <% if (!activeCat && !searchQuery && popularMovies && popularMovies.length > 0) { %>
-            <h2 class="section-title">POPULAR MOVIES</h2>
-            <div class="movie-grid">
-                <% popularMovies.forEach(movie => { %>
-                    <a href="/movie/<%= movie._id %>" class="movie-card">
-                        <div class="poster-wrapper">
-                            <% if(movie.poster) { %>
-                                <img src="<%= movie.poster %>" alt="<%= movie.title %>">
-                            <% } else { %>
-                                <div class="play-placeholder">▶</div>
-                            <% } %>
-                            <span class="views-badge">👁 <%= movie.views || 0 %></span>
-                        </div>
-                        <div class="info"><%= movie.title %></div>
-                    </a>
-                <% }) %>
-            </div>
-        <% } %>
-
     </div>
+
+    <!-- Content Grid -->
+    <div class="movie-grid">
+        <% if (movies && movies.length > 0) { %>
+            <% movies.forEach(movie => { %>
+                <a href="/movie/<%= movie.id %>" style="text-decoration: none; color: inherit;">
+                    <div class="card">
+                        <% if (movie.isPinned) { %> <span class="pin-badge">PINNED</span> <% } %>
+                        <img src="<%= movie.poster %>" alt="<%= movie.title %>">
+                        <div class="card-body">
+                            <div class="card-title"><%= movie.title %></div>
+                            <div class="card-meta"><%= movie.category %></div>
+                        </div>
+                    </div>
+                </a>
+            <% }) %>
+        <% } else { %>
+            <p style="grid-column: 1/-1; text-align: center; color: #94a3b8;">No content found in this category.</p>
+        <% } %>
+    </div>
+
+    <!-- Pagination -->
+    <% if (totalPages > 1) { %>
+        <div class="pagination">
+            <% const catParam = selectedCategory && selectedCategory !== 'All' ? '&category=' + encodeURIComponent(selectedCategory) : ''; %>
+            
+            <a href="/?page=<%= currentPage - 1 %><%= catParam %>" class="page-btn <%= currentPage <= 1 ? 'disabled' : '' %>">← Previous</a>
+            
+            <span class="page-info">Page <%= currentPage %> of <%= totalPages %></span>
+            
+            <a href="/?page=<%= currentPage + 1 %><%= catParam %>" class="page-btn <%= currentPage >= totalPages ? 'disabled' : '' %>">Next →</a>
+        </div>
+    <% } %>
 </div>
-
-<!-- Footer -->
-<footer class="footer">
-    <p>© MOVIEHOUSE - All Rights Reserved</p>
-</footer>
-
-<!-- 🟢 Dark/Light Mode JavaScript Script -->
-<script>
-    const themeToggleBtn = document.getElementById('themeToggleBtn');
-    
-    // Check saved theme in LocalStorage
-    const currentTheme = localStorage.getItem('theme');
-    if (currentTheme === 'light') {
-        document.body.classList.add('light-mode');
-        themeToggleBtn.textContent = '🌙'; // Light mode active, show Moon icon
-    } else {
-        themeToggleBtn.textContent = '☀️'; // Dark mode active, show Sun icon
-    }
-
-    // Toggle click action
-    themeToggleBtn.addEventListener('click', () => {
-        document.body.classList.toggle('light-mode');
-        
-        if (document.body.classList.contains('light-mode')) {
-            localStorage.setItem('theme', 'light');
-            themeToggleBtn.textContent = '🌙';
-        } else {
-            localStorage.setItem('theme', 'dark');
-            themeToggleBtn.textContent = '☀️';
-        }
-    });
-</script>
 
 </body>
 </html>
