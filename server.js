@@ -5,7 +5,7 @@ const multer = require('multer');
 
 const app = express();
 
-// Body Parser & Static Middleware
+// Body Parser & Static Files
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.set('view engine', 'ejs');
@@ -13,7 +13,7 @@ app.set('views', path.join(__dirname, 'views'));
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// File Upload (Multer Setup)
+// Upload Setup (Multer)
 const storage = multer.diskStorage({
     destination: (req, file, cb) => cb(null, 'uploads/'),
     filename: (req, file, cb) => cb(null, Date.now() + path.extname(file.originalname))
@@ -23,10 +23,10 @@ const upload = multer({ storage });
 // Database Connection
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/moviestream';
 mongoose.connect(MONGO_URI)
-    .then(() => console.log('MongoDB Connected'))
-    .catch(err => console.error('MongoDB Error:', err));
+    .then(() => console.log('MongoDB Connected Successfully'))
+    .catch(err => console.error('MongoDB Connection Error:', err));
 
-// --- Schemas & Models ---
+// Schemas & Models
 const movieSchema = new mongoose.Schema({
     title: { type: String, required: true },
     poster: { type: String, required: true },
@@ -50,7 +50,7 @@ const Movie = mongoose.model('Movie', movieSchema);
 const Category = mongoose.model('Category', categorySchema);
 const Admin = mongoose.model('Admin', adminSchema);
 
-// Helper function to get categories
+// Helper function to fetch categories
 async function getCategories() {
     const cats = await Category.find().sort({ name: 1 });
     if (cats.length === 0) {
@@ -61,9 +61,39 @@ async function getCategories() {
     return cats.map(c => c.name);
 }
 
+// ================= FRONTEND ROUTES ================= //
+
+// 🟢 Homepage Route
+app.get('/', async (req, res) => {
+    try {
+        const movies = await Movie.find().sort({ isPinned: -1, createdAt: -1 });
+        const categories = await getCategories();
+        res.render('index', { movies, categories });
+    } catch (err) {
+        console.error(err);
+        res.status(500).send("Server Error");
+    }
+});
+
+// 🟢 Single Movie / Series Details Route (Fixes 'Cannot GET /movie/id')
+app.get('/movie/:id', async (req, res) => {
+    try {
+        const movie = await Movie.findById(req.params.id);
+        if (!movie) {
+            return res.status(404).send("Movie not found");
+        }
+        movie.views = (movie.views || 0) + 1;
+        await movie.save();
+        res.render('movie', { movie });
+    } catch (err) {
+        console.error(err);
+        res.status(500).send("Server Error");
+    }
+});
+
 // ================= ADMIN ROUTES ================= //
 
-// 🟢 1. GET Admin Panel Dashboard
+// 🟢 Admin Panel Dashboard
 app.get('/admin', async (req, res) => {
     try {
         const movies = await Movie.find().sort({ createdAt: -1 });
@@ -88,7 +118,7 @@ app.get('/admin', async (req, res) => {
     }
 });
 
-// 🟢 2. POST Save Content (Add & Edit)
+// 🟢 Save Content (Add & Edit)
 app.post('/admin/save-movie', upload.single('posterFile'), async (req, res) => {
     try {
         const { id, title, category, contentType, posterUrl, isPinned, linkName, linkUrl, epSeason, epNum, epName, epUrl } = req.body;
@@ -150,7 +180,7 @@ app.post('/admin/save-movie', upload.single('posterFile'), async (req, res) => {
     }
 });
 
-// 🟢 3. POST Toggle Pin/Unpin
+// 🟢 Toggle Pin
 app.post('/admin/toggle-pin/:id', async (req, res) => {
     try {
         const movie = await Movie.findById(req.params.id);
@@ -164,7 +194,7 @@ app.post('/admin/toggle-pin/:id', async (req, res) => {
     }
 });
 
-// 🟢 4. POST Delete Content
+// 🟢 Delete Movie/Series
 app.post('/admin/delete-movie/:id', async (req, res) => {
     try {
         await Movie.findByIdAndDelete(req.params.id);
@@ -174,7 +204,7 @@ app.post('/admin/delete-movie/:id', async (req, res) => {
     }
 });
 
-// 🟢 5. POST Add Category
+// 🟢 Add Category
 app.post('/admin/add-category', async (req, res) => {
     try {
         const { categoryName } = req.body;
@@ -187,7 +217,7 @@ app.post('/admin/add-category', async (req, res) => {
     }
 });
 
-// 🟢 6. POST Delete Category
+// 🟢 Delete Category
 app.post('/admin/delete-category', async (req, res) => {
     try {
         const { categoryName } = req.body;
@@ -198,7 +228,7 @@ app.post('/admin/delete-category', async (req, res) => {
     }
 });
 
-// 🟢 7. POST Change Admin Password
+// 🟢 Change Admin Password
 app.post('/admin/change-password', async (req, res) => {
     try {
         const { oldPassword, newPassword } = req.body;
@@ -218,7 +248,7 @@ app.post('/admin/change-password', async (req, res) => {
     }
 });
 
-// Logout Route
+// Logout
 app.get('/admin/logout', (req, res) => {
     res.redirect('/');
 });
