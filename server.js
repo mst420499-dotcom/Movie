@@ -67,7 +67,7 @@ async function getCategories() {
 app.get('/', async (req, res) => {
     try {
         const page = Math.max(1, parseInt(req.query.page) || 1);
-        const limit = 12; // প্রতি পেজে কতগুলো আইটেম দেখাবে
+        const limit = 12;
         const skip = (page - 1) * limit;
         const selectedCategory = req.query.category ? req.query.category.trim() : null;
 
@@ -152,7 +152,6 @@ app.post('/admin/save-movie', upload.single('posterFile'), async (req, res) => {
             poster = '/uploads/' + req.file.filename;
         }
 
-        // Single Movie Video Links Processing
         let videoLinks = [];
         if (Array.isArray(linkName)) {
             videoLinks = linkName.map((name, index) => ({ name, url: linkUrl[index] })).filter(l => l.url);
@@ -160,7 +159,6 @@ app.post('/admin/save-movie', upload.single('posterFile'), async (req, res) => {
             videoLinks.push({ name: linkName, url: linkUrl });
         }
 
-        // Web Series Episodes Processing
         let episodes = [];
         if (Array.isArray(epName)) {
             episodes = epName.map((name, index) => ({
@@ -218,7 +216,7 @@ app.post('/admin/toggle-pin/:id', async (req, res) => {
     }
 });
 
-// 🟢 Delete Movie/Series
+// 🟢 Delete Content
 app.post('/admin/delete-movie/:id', async (req, res) => {
     try {
         await Movie.findByIdAndDelete(req.params.id);
