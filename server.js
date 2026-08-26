@@ -4,6 +4,7 @@ const path = require('path');
 
 const app = express();
 
+// Middleware Settings
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.set('view engine', 'ejs');
@@ -11,11 +12,13 @@ app.set('views', path.join(__dirname, 'views'));
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
+// Database Connection
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/moviestream';
 mongoose.connect(MONGO_URI)
     .then(() => console.log('MongoDB Connected Successfully'))
     .catch(err => console.error('MongoDB Connection Error:', err));
 
+// Mongoose Schema & Model
 const movieSchema = new mongoose.Schema({
     title: { type: String, required: true },
     poster: { type: String, required: true },
@@ -29,7 +32,9 @@ const movieSchema = new mongoose.Schema({
 
 const Movie = mongoose.model('Movie', movieSchema);
 
-// HOME PAGE ROUTE
+// ================= ROUTING SECTION ================= //
+
+// 1. HOME PAGE ROUTE (5 items per page)
 app.get('/', async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
@@ -45,13 +50,11 @@ app.get('/', async (req, res) => {
         const totalMovies = await Movie.countDocuments(query);
         const totalPages = Math.ceil(totalMovies / limit);
 
-        // Recently Updated Movies
         const movies = await Movie.find(query)
             .sort({ isPinned: -1, createdAt: -1 })
             .skip(skip)
             .limit(limit);
 
-        // Popular Movies (Sorted by most views)
         const popularMovies = await Movie.find()
             .sort({ views: -1 })
             .limit(5);
@@ -70,7 +73,7 @@ app.get('/', async (req, res) => {
     }
 });
 
-// CATEGORY PAGE ROUTE
+// 2. CATEGORY PAGE ROUTE
 app.get('/category/:categoryName', async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
@@ -104,7 +107,7 @@ app.get('/category/:categoryName', async (req, res) => {
     }
 });
 
-// MOVIE DETAILS PAGE
+// 3. MOVIE DETAILS PAGE
 app.get('/movie/:id', async (req, res) => {
     try {
         const movie = await Movie.findByIdAndUpdate(
@@ -127,5 +130,49 @@ app.get('/movie/:id', async (req, res) => {
     }
 });
 
+// 🟢 4. SINGLE ADMIN PANEL PAGE ROUTE (/admin)
+app.get('/admin', async (req, res) => {
+    try {
+        const movies = await Movie.find().sort({ createdAt: -1 });
+        res.render('admin', { movies });
+    } catch (err) {
+        console.error(err);
+        res.status(500).send("Server Error");
+    }
+});
+
+// 🟢 5. ADMIN ADD MOVIE API
+app.post('/admin/add', async (req, res) => {
+    try {
+        const { title, poster, category, contentType, isPinned } = req.body;
+
+        const newMovie = new Movie({
+            title,
+            poster,
+            category,
+            contentType,
+            isPinned: isPinned === 'on' || isPinned === true
+        });
+
+        await newMovie.save();
+        res.redirect('/admin');
+    } catch (err) {
+        console.error(err);
+        res.status(500).send("Failed to save content");
+    }
+});
+
+// 🟢 6. ADMIN DELETE MOVIE API
+app.post('/admin/delete/:id', async (req, res) => {
+    try {
+        await Movie.findByIdAndDelete(req.params.id);
+        res.redirect('/admin');
+    } catch (err) {
+        console.error(err);
+        res.status(500).send("Failed to delete content");
+    }
+});
+
+// Start Server
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
