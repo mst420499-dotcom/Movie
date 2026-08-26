@@ -5,7 +5,7 @@ const multer = require('multer');
 
 const app = express();
 
-// Body Parser & Static Files Setup
+// Middleware & View Engine
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.set('view engine', 'ejs');
@@ -13,7 +13,7 @@ app.set('views', path.join(__dirname, 'views'));
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Multer Setup for File Uploads
+// Multer Storage Configuration
 const storage = multer.diskStorage({
     destination: (req, file, cb) => cb(null, 'uploads/'),
     filename: (req, file, cb) => cb(null, Date.now() + path.extname(file.originalname))
@@ -26,7 +26,7 @@ mongoose.connect(MONGO_URI)
     .then(() => console.log('MongoDB Connected Successfully'))
     .catch(err => console.error('MongoDB Connection Error:', err));
 
-// Schemas & Models
+// Database Schemas & Models
 const movieSchema = new mongoose.Schema({
     title: { type: String, required: true },
     poster: { type: String, required: true },
@@ -50,7 +50,7 @@ const Movie = mongoose.model('Movie', movieSchema);
 const Category = mongoose.model('Category', categorySchema);
 const Admin = mongoose.model('Admin', adminSchema);
 
-// Helper function to fetch categories
+// Helper function to get categories
 async function getCategories() {
     const cats = await Category.find().sort({ name: 1 });
     if (cats.length === 0) {
@@ -63,16 +63,24 @@ async function getCategories() {
 
 // ================= FRONTEND ROUTES ================= //
 
-// 🟢 Homepage Route (Category Filter + Pagination Fixed)
-app.get('/', async (req, res) => {
+// 🟢 Homepage & Category Filter Route
+app.get(['/', '/category/:categoryName'], async (req, res) => {
     try {
         const page = Math.max(1, parseInt(req.query.page) || 1);
         const limit = 12;
         const skip = (page - 1) * limit;
-        const selectedCategory = req.query.category ? req.query.category.trim() : null;
+        
+        const searchQuery = req.query.search ? req.query.search.trim() : '';
+        const selectedCategory = req.params.categoryName || null;
 
         let query = {};
-        if (selectedCategory && selectedCategory !== 'All') {
+        
+        // Search Filter
+        if (searchQuery) {
+            query.title = { $regex: searchQuery, $options: 'i' };
+        }
+        // Category Filter
+        else if (selectedCategory) {
             query.category = selectedCategory;
         }
 
@@ -84,14 +92,22 @@ app.get('/', async (req, res) => {
             .skip(skip)
             .limit(limit);
 
+        // Fetch Top Popular Movies (if on homepage without search/category)
+        let popularMovies = [];
+        if (!selectedCategory && !searchQuery) {
+            popularMovies = await Movie.find().sort({ views: -1 }).limit(6);
+        }
+
         const categories = await getCategories();
 
         res.render('index', { 
             movies, 
+            popularMovies,
             categories, 
             currentPage: page, 
             totalPages,
-            selectedCategory: selectedCategory || 'All'
+            selectedCategory,
+            searchQuery
         });
     } catch (err) {
         console.error("Homepage Error:", err);
@@ -103,9 +119,8 @@ app.get('/', async (req, res) => {
 app.get('/movie/:id', async (req, res) => {
     try {
         const movie = await Movie.findById(req.params.id);
-        if (!movie) {
-            return res.status(404).send("Movie not found");
-        }
+        if (!movie) return res.status(404).send("Movie not found");
+
         movie.views = (movie.views || 0) + 1;
         await movie.save();
         res.render('movie', { movie });
@@ -117,17 +132,12 @@ app.get('/movie/:id', async (req, res) => {
 
 // ================= ADMIN ROUTES ================= //
 
-// 🟢 Admin Panel Dashboard
 app.get('/admin', async (req, res) => {
     try {
         const movies = await Movie.find().sort({ createdAt: -1 });
         const categories = await getCategories();
         const editId = req.query.edit || null;
-        let movieToEdit = null;
-
-        if (editId) {
-            movieToEdit = await Movie.findById(editId);
-        }
+        let movieToEdit = editId ? await Movie.findById(editId) : null;
 
         res.render('admin', {
             movies,
@@ -142,7 +152,6 @@ app.get('/admin', async (req, res) => {
     }
 });
 
-// 🟢 Save Content (Add & Edit)
 app.post('/admin/save-movie', upload.single('posterFile'), async (req, res) => {
     try {
         const { id, title, category, contentType, posterUrl, isPinned, linkName, linkUrl, epSeason, epNum, epName, epUrl } = req.body;
@@ -192,8 +201,7 @@ app.post('/admin/save-movie', upload.single('posterFile'), async (req, res) => {
             res.redirect('/admin?msg=Content Updated Successfully');
         } else {
             if (!movieData.poster) movieData.poster = 'https://via.placeholder.com/300x450';
-            const newMovie = new Movie(movieData);
-            await newMovie.save();
+            await Movie.create(movieData);
             res.redirect('/admin?msg=New Content Added Successfully');
         }
     } catch (err) {
@@ -202,7 +210,6 @@ app.post('/admin/save-movie', upload.single('posterFile'), async (req, res) => {
     }
 });
 
-// 🟢 Toggle Pin/Unpin
 app.post('/admin/toggle-pin/:id', async (req, res) => {
     try {
         const movie = await Movie.findById(req.params.id);
@@ -216,7 +223,6 @@ app.post('/admin/toggle-pin/:id', async (req, res) => {
     }
 });
 
-// 🟢 Delete Content
 app.post('/admin/delete-movie/:id', async (req, res) => {
     try {
         await Movie.findByIdAndDelete(req.params.id);
@@ -226,20 +232,16 @@ app.post('/admin/delete-movie/:id', async (req, res) => {
     }
 });
 
-// 🟢 Add Category
 app.post('/admin/add-category', async (req, res) => {
     try {
         const { categoryName } = req.body;
-        if (categoryName) {
-            await Category.create({ name: categoryName.trim() });
-        }
+        if (categoryName) await Category.create({ name: categoryName.trim() });
         res.redirect('/admin?msg=Category Added');
     } catch (err) {
         res.redirect('/admin?err=Category Exists or Invalid');
     }
 });
 
-// 🟢 Delete Category
 app.post('/admin/delete-category', async (req, res) => {
     try {
         const { categoryName } = req.body;
@@ -250,14 +252,12 @@ app.post('/admin/delete-category', async (req, res) => {
     }
 });
 
-// 🟢 Change Password
 app.post('/admin/change-password', async (req, res) => {
     try {
         const { oldPassword, newPassword } = req.body;
         let admin = await Admin.findOne();
-        if (!admin) {
-            admin = await Admin.create({ password: 'admin' });
-        }
+        if (!admin) admin = await Admin.create({ password: 'admin' });
+
         if (admin.password === oldPassword) {
             admin.password = newPassword;
             await admin.save();
@@ -270,11 +270,9 @@ app.post('/admin/change-password', async (req, res) => {
     }
 });
 
-// Logout
 app.get('/admin/logout', (req, res) => {
     res.redirect('/');
 });
 
-// Start Express Server
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
