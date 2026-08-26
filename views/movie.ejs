@@ -15,7 +15,6 @@
 
         .container { max-width: 900px; margin: 0 auto; }
 
-        /* Back to Home Link */
         .back-link { 
             display: inline-block; 
             color: #94a3b8; 
@@ -31,7 +30,7 @@
             margin-bottom: 15px; 
         }
 
-        /* Video Box Container */
+        /* Player Box */
         .player-card { 
             background: #1e1e1e; 
             border-radius: 8px; 
@@ -52,9 +51,10 @@
             width: 100%; 
             height: 100%; 
             border: 0; 
+            object-fit: contain;
         }
 
-        /* 5 Sec Skip Control Buttons */
+        /* 5 Sec Controls */
         .controls-bar { 
             display: flex; 
             justify-content: center; 
@@ -72,8 +72,9 @@
             font-weight: bold; 
             cursor: pointer; 
         }
+        .btn-skip:hover { background: #b80710; }
 
-        /* Details Card */
+        /* Details & Server List Card */
         .details-card { 
             background: #1e1e1e; 
             padding: 20px; 
@@ -107,7 +108,7 @@
             border-color: #718096; 
         }
 
-        /* Related Movies Section */
+        /* Related Movies Grid */
         .section-title { 
             font-size: 18px; 
             font-weight: bold; 
@@ -148,15 +149,14 @@
 <body>
 
 <div class="container">
-    <!-- Back Button -->
     <a href="/" class="back-link">← Back to Home</a>
 
     <h1 class="movie-title"><%= movie.title %></h1>
 
-    <!-- Player Box -->
+    <!-- Dynamic Player Section -->
     <div class="player-card">
-        <div class="video-wrapper">
-            <iframe id="videoPlayer" src="" allowfullscreen allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"></iframe>
+        <div class="video-wrapper" id="playerContainer">
+            <!-- JavaScript dynamically inserts <video> or <iframe> here -->
         </div>
         
         <div class="controls-bar">
@@ -165,7 +165,7 @@
         </div>
     </div>
 
-    <!-- Movie & Server Info Card -->
+    <!-- Info & Episode/Server Selection Card -->
     <div class="details-card">
         <p><strong>Category:</strong> <%= movie.category %></p>
         <p><strong>Views:</strong> <%= movie.views %></p>
@@ -191,7 +191,7 @@
         <% } %>
     </div>
 
-    <!-- Related Movies Grid -->
+    <!-- Related Movies Section -->
     <% if (typeof relatedMovies !== 'undefined' && relatedMovies.length > 0) { %>
         <h3 class="section-title">Related Movies</h3>
         <div class="related-grid">
@@ -208,31 +208,60 @@
 </div>
 
 <script>
-    // Embed and YouTube Link Converter
-    function formatEmbedUrl(url) {
-        if (!url) return '';
-        if (url.includes('youtube.com/watch?v=')) {
-            const videoId = url.split('v=')[1].split('&')[0];
-            return 'https://www.youtube.com/embed/' + videoId + '?autoplay=1';
-        }
-        if (url.includes('youtu.be/')) {
-            const videoId = url.split('youtu.be/')[1].split('?')[0];
-            return 'https://www.youtube.com/embed/' + videoId + '?autoplay=1';
-        }
-        return url;
-    }
+    let isDirectVideo = false;
 
     function playMedia(btn, url) {
-        document.getElementById('videoPlayer').src = formatEmbedUrl(url);
+        const container = document.getElementById('playerContainer');
+        const cleanUrl = url.trim();
+
+        // Check if URL is Direct Video (.mp4, .mkv, .webm) or Uploaded file
+        if (cleanUrl.match(/\.(mp4|webm|mkv|ogg)($|\?)/i) || cleanUrl.startsWith('/uploads/')) {
+            isDirectVideo = true;
+            container.innerHTML = `<video id="videoPlayer" controls autoplay style="width:100%; height:100%;">
+                <source src="${cleanUrl}">
+                Your browser does not support HTML5 video.
+            </video>`;
+        } else {
+            // Embedded Video (YouTube, Google Drive, Streamtape, etc.)
+            isDirectVideo = false;
+            let embedUrl = cleanUrl;
+            
+            if (cleanUrl.includes('youtube.com/watch?v=')) {
+                const videoId = cleanUrl.split('v=')[1].split('&')[0];
+                embedUrl = 'https://www.youtube.com/embed/' + videoId + '?autoplay=1';
+            } else if (cleanUrl.includes('youtu.be/')) {
+                const videoId = cleanUrl.split('youtu.be/')[1].split('?')[0];
+                embedUrl = 'https://www.youtube.com/embed/' + videoId + '?autoplay=1';
+            }
+
+            container.innerHTML = `<iframe id="videoPlayer" src="${embedUrl}" allowfullscreen allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"></iframe>`;
+        }
+
+        // Active class UI handle
         document.querySelectorAll('.btn-server').forEach(b => b.classList.remove('active'));
         if (btn) btn.classList.add('active');
     }
 
-    function skipTime(sec) {
-        alert("Skipping inside embedded players is managed by the provider.");
+    // 5 Sec Forward / Rewind Function
+    function skipTime(seconds) {
+        if (isDirectVideo) {
+            const video = document.getElementById('videoPlayer');
+            if (video) video.currentTime += seconds;
+        } else {
+            alert("5 Sec button works on Direct Video files. For YouTube/Embed, use keyboard Arrow keys.");
+        }
     }
 
-    // Auto-play the first video on page load
+    // Keyboard Shortcuts (Left / Right Arrow Keys)
+    document.addEventListener('keydown', function(e) {
+        if (e.key === "ArrowLeft") {
+            skipTime(-5);
+        } else if (e.key === "ArrowRight") {
+            skipTime(5);
+        }
+    });
+
+    // Auto load first video on page render
     document.addEventListener("DOMContentLoaded", function() {
         const firstBtn = document.querySelector('.btn-server');
         if (firstBtn) {
