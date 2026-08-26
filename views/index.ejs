@@ -3,37 +3,112 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Home - Movie Streaming</title>
+    <title>MOVIEHOUSE - Stream Movies & Series</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
-            background: #0b0f17; 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+            background: #090d16; 
             color: #ffffff; 
-            padding: 20px 15px; 
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
         }
 
-        .container { max-width: 1100px; margin: 0 auto; }
+        .main-wrapper { flex: 1; padding: 20px 15px; }
+        .container { max-width: 1200px; margin: 0 auto; }
 
-        /* Top Category Pill Buttons */
+        /* Top Header & Logo */
+        .header {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            margin-bottom: 25px;
+        }
+
+        .logo {
+            font-size: 26px;
+            font-weight: 900;
+            color: #ffffff;
+            text-decoration: none;
+            letter-spacing: 1px;
+        }
+
+        .logo span { color: #00bcd4; }
+
+        .theme-toggle {
+            position: absolute;
+            right: 10px;
+            background: #1b2434;
+            border: none;
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: #ffb74d;
+            font-size: 18px;
+        }
+
+        /* Search Bar */
+        .search-container {
+            max-width: 550px;
+            margin: 0 auto 30px auto;
+        }
+
+        .search-box {
+            display: flex;
+            background: #121926;
+            border-radius: 30px;
+            padding: 5px 6px 5px 20px;
+            border: 1px solid #1e293b;
+        }
+
+        .search-input {
+            width: 100%;
+            background: transparent;
+            border: none;
+            outline: none;
+            color: #fff;
+            font-size: 14px;
+        }
+
+        .search-btn {
+            background: #00bcd4;
+            color: #ffffff;
+            border: none;
+            padding: 10px 24px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 14px;
+            transition: background 0.2s;
+        }
+
+        .search-btn:hover { background: #00acc1; }
+
+        /* Category Pill Buttons Navigation */
         .category-nav {
             display: flex;
             justify-content: center;
             gap: 10px;
-            margin-bottom: 25px;
+            margin-bottom: 40px;
             flex-wrap: wrap;
         }
 
         .cat-btn {
-            background: #151c28;
+            background: #121926;
             color: #94a3b8;
-            padding: 8px 20px;
+            padding: 8px 18px;
             border-radius: 20px;
             text-decoration: none;
-            font-size: 14px;
-            font-weight: 500;
+            font-size: 13px;
+            font-weight: 600;
             border: 1px solid #1e293b;
-            transition: all 0.2s ease;
+            transition: all 0.2s;
         }
 
         .cat-btn:hover, .cat-btn.active {
@@ -45,7 +120,7 @@
         /* Section Title */
         .section-title {
             text-align: center;
-            font-size: 16px;
+            font-size: 15px;
             font-weight: 800;
             letter-spacing: 1px;
             margin-bottom: 25px;
@@ -56,13 +131,14 @@
         /* Movie Grid Layout */
         .movie-grid { 
             display: grid; 
-            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); 
+            grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); 
             gap: 18px; 
+            margin-bottom: 40px;
         }
 
         .movie-card { 
-            background: #151c28; 
-            border-radius: 10px; 
+            background: #121926; 
+            border-radius: 12px; 
             overflow: hidden; 
             text-decoration: none; 
             color: #fff; 
@@ -73,16 +149,19 @@
         }
 
         .movie-card:hover { 
-            transform: translateY(-4px); 
-            box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+            transform: translateY(-5px); 
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
         }
 
-        /* Image Wrapper with Relative Positioning for Badges */
+        /* Poster Wrapper */
         .poster-wrapper {
             position: relative;
             width: 100%;
-            height: 250px;
-            background: #0d131d;
+            height: 270px;
+            background: #0a0e17;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .poster-wrapper img { 
@@ -92,43 +171,35 @@
             display: block; 
         }
 
-        /* Pinned Badge (Orange/Gold Pill) */
-        .pinned-badge {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            background: #ff9800;
-            color: #000;
-            font-size: 10px;
-            font-weight: 900;
-            padding: 3px 8px;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            gap: 3px;
-            text-transform: uppercase;
+        /* Play Icon Indicator if Poster Image Fails */
+        .play-placeholder {
+            font-size: 40px;
+            color: #ffffff;
+            opacity: 0.8;
         }
 
-        /* Views Badge (Bottom Right Overlay) */
+        /* Views Badge Overlay */
         .views-badge {
             position: absolute;
             bottom: 8px;
             right: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 2px 8px;
+            border-radius: 10px;
             color: #ffffff;
-            font-size: 12px;
+            font-size: 11px;
             font-weight: 600;
             display: flex;
             align-items: center;
             gap: 4px;
-            text-shadow: 0 1px 3px rgba(0,0,0,0.8);
         }
 
         .movie-card .info { 
-            padding: 12px; 
-            font-size: 14px; 
-            font-weight: 600;
+            padding: 14px 10px; 
+            font-size: 13px; 
+            font-weight: 700;
             text-align: center;
-            background: #151c28;
+            background: #121926;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -140,92 +211,140 @@
             justify-content: center;
             align-items: center;
             gap: 8px;
-            margin-top: 40px;
+            margin-bottom: 50px;
             flex-wrap: wrap;
         }
 
         .page-btn {
-            background: #151c28;
+            background: #121926;
             color: #ffffff;
             border: 1px solid #1e293b;
             padding: 8px 14px;
             border-radius: 6px;
             text-decoration: none;
-            font-size: 14px;
+            font-size: 13px;
             font-weight: bold;
             transition: all 0.2s;
         }
 
-        .page-btn:hover { 
+        .page-btn:hover, .page-btn.active { 
             background: #00bcd4; 
             border-color: #00bcd4; 
             color: #fff; 
         }
 
-        .page-btn.active { 
-            background: #00bcd4; 
-            border-color: #00bcd4; 
-            color: #fff; 
-            pointer-events: none; 
+        /* Footer Style */
+        .footer {
+            background: #060910;
+            padding: 20px 0;
+            text-align: center;
+            border-top: 1px solid #121926;
+            color: #64748b;
+            font-size: 13px;
         }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <!-- Centered Category Buttons -->
-    <div class="category-nav">
-        <a href="/" class="cat-btn <%= !selectedCategory ? 'active' : '' %>">All Movies</a>
-        <a href="/category/Natok" class="cat-btn <%= selectedCategory === 'Natok' ? 'active' : '' %>">Natok</a>
-        <a href="/category/Movie" class="cat-btn <%= selectedCategory === 'Movie' ? 'active' : '' %>">Movie</a>
-        <a href="/category/Web Series" class="cat-btn <%= selectedCategory === 'Web Series' ? 'active' : '' %>">Web Series</a>
-    </div>
+<div class="main-wrapper">
+    <div class="container">
+        
+        <!-- Header -->
+        <div class="header">
+            <a href="/" class="logo">MOVIE<span>HOUSE</span></a>
+            <button class="theme-toggle">☀️</button>
+        </div>
 
-    <h2 class="section-title">RECENTLY UPDATED</h2>
+        <!-- Search Bar -->
+        <div class="search-container">
+            <form action="/" method="GET" class="search-box">
+                <input type="text" name="search" class="search-input" placeholder="Search movies..." value="<%= searchQuery %>">
+                <button type="submit" class="search-btn">Search</button>
+            </form>
+        </div>
 
-    <!-- Movie Card Grid -->
-    <div class="movie-grid">
-        <% if (movies && movies.length > 0) { %>
-            <% movies.forEach(movie => { %>
-                <a href="/movie/<%= movie._id %>" class="movie-card">
-                    <div class="poster-wrapper">
-                        <img src="<%= movie.poster %>" alt="<%= movie.title %>">
-                        
-                        <% if (movie.isPinned) { %>
-                            <span class="pinned-badge">📌 PINNED</span>
-                        <% } %>
+        <% const activeCat = typeof selectedCategory !== 'undefined' ? selectedCategory : null; %>
+        
+        <!-- Categories Navigation Pill Bar -->
+        <div class="category-nav">
+            <a href="/" class="cat-btn <%= !activeCat ? 'active' : '' %>">All Movies</a>
+            <a href="/category/Bangladeshi" class="cat-btn <%= activeCat === 'Bangladeshi' ? 'active' : '' %>">Bangladeshi</a>
+            <a href="/category/Kolkata Bangla" class="cat-btn <%= activeCat === 'Kolkata Bangla' ? 'active' : '' %>">Kolkata Bangla</a>
+            <a href="/category/Hindi" class="cat-btn <%= activeCat === 'Hindi' ? 'active' : '' %>">Hindi</a>
+            <a href="/category/Tamil" class="cat-btn <%= activeCat === 'Tamil' ? 'active' : '' %>">Tamil</a>
+            <a href="/category/English" class="cat-btn <%= activeCat === 'English' ? 'active' : '' %>">English</a>
+            <a href="/category/MCU" class="cat-btn <%= activeCat === 'MCU' ? 'active' : '' %>">MCU</a>
+            <a href="/category/MCU WEB" class="cat-btn <%= activeCat === 'MCU WEB' ? 'active' : '' %>">MCU WEB</a>
+            <a href="/category/DCU" class="cat-btn <%= activeCat === 'DCU' ? 'active' : '' %>">DCU</a>
+            <a href="/category/Web Series" class="cat-btn <%= activeCat === 'Web Series' ? 'active' : '' %>">Web Series</a>
+            <a href="/category/Natok" class="cat-btn <%= activeCat === 'Natok' ? 'active' : '' %>">Natok</a>
+        </div>
 
-                        <span class="views-badge">
-                            👁 <%= movie.views || 0 %>
-                        </span>
-                    </div>
-                    <div class="info"><%= movie.title %></div>
-                </a>
-            <% }) %>
-        <% } else { %>
-            <p style="grid-column: 1/-1; text-align: center; color: #64748b;">No content found.</p>
-        <% } %>
-    </div>
-
-    <!-- Pagination Controls (1 2 3) -->
-    <% if (totalPages > 1) { %>
-        <div class="pagination">
-            <% if (currentPage > 1) { %>
-                <a href="/?page=<%= currentPage - 1 %>" class="page-btn">« Prev</a>
-            <% } %>
-
-            <% for(let i = 1; i <= totalPages; i++) { %>
-                <a href="/?page=<%= i %>" class="page-btn <%= currentPage === i ? 'active' : '' %>">
-                    <%= i %>
-                </a>
-            <% } %>
-
-            <% if (currentPage < totalPages) { %>
-                <a href="/?page=<%= currentPage + 1 %>" class="page-btn">Next »</a>
+        <!-- RECENTLY UPDATED SECTION -->
+        <h2 class="section-title">RECENTLY UPDATED</h2>
+        <div class="movie-grid">
+            <% if (movies && movies.length > 0) { %>
+                <% movies.forEach(movie => { %>
+                    <a href="/movie/<%= movie._id %>" class="movie-card">
+                        <div class="poster-wrapper">
+                            <% if(movie.poster) { %>
+                                <img src="<%= movie.poster %>" alt="<%= movie.title %>">
+                            <% } else { %>
+                                <div class="play-placeholder">▶</div>
+                            <% } %>
+                            <span class="views-badge">👁 <%= movie.views || 0 %></span>
+                        </div>
+                        <div class="info"><%= movie.title %></div>
+                    </a>
+                <% }) %>
+            <% } else { %>
+                <p style="grid-column: 1/-1; text-align: center; color: #64748b;">No movies found.</p>
             <% } %>
         </div>
-    <% } %>
+
+        <!-- Pagination Bar -->
+        <% if (totalPages > 1) { %>
+            <% const baseUrl = activeCat ? '/category/' + activeCat : ''; %>
+            <div class="pagination">
+                <% if (currentPage > 1) { %>
+                    <a href="<%= baseUrl %>?page=<%= currentPage - 1 %>" class="page-btn">« Prev</a>
+                <% } %>
+                <% for(let i = 1; i <= totalPages; i++) { %>
+                    <a href="<%= baseUrl %>?page=<%= i %>" class="page-btn <%= currentPage === i ? 'active' : '' %>"><%= i %></a>
+                <% } %>
+                <% if (currentPage < totalPages) { %>
+                    <a href="<%= baseUrl %>?page=<%= currentPage + 1 %>" class="page-btn">Next »</a>
+                <% } %>
+            </div>
+        <% } %>
+
+        <!-- POPULAR MOVIES SECTION -->
+        <% if (!activeCat && !searchQuery && popularMovies && popularMovies.length > 0) { %>
+            <h2 class="section-title">POPULAR MOVIES</h2>
+            <div class="movie-grid">
+                <% popularMovies.forEach(movie => { %>
+                    <a href="/movie/<%= movie._id %>" class="movie-card">
+                        <div class="poster-wrapper">
+                            <% if(movie.poster) { %>
+                                <img src="<%= movie.poster %>" alt="<%= movie.title %>">
+                            <% } else { %>
+                                <div class="play-placeholder">▶</div>
+                            <% } %>
+                            <span class="views-badge">👁 <%= movie.views || 0 %></span>
+                        </div>
+                        <div class="info"><%= movie.title %></div>
+                    </a>
+                <% }) %>
+            </div>
+        <% } %>
+
+    </div>
 </div>
+
+<!-- Footer -->
+<footer class="footer">
+    <p>© MOVIEHOUSE - All Rights Reserved</p>
+</footer>
 
 </body>
 </html>
