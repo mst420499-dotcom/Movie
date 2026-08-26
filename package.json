@@ -1,17 +1,21 @@
 {
-  "name": "bangla-movie-house",
-  "version": "1.1.0",
-  "main": "server.js",
+  "name": "book-store-server",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
   "dependencies": {
-    "body-parser": "^1.20.2",
     "cors": "^2.8.5",
-    "ejs": "^3.1.9",
-    "express": "^4.19.2",
-    "express-session": "^1.18.0",
-    "mongoose": "^8.24.4",
+    "dotenv": "^17.3.1",
+    "express": "^4.21.2",
+    "mongoose": "^8.2.4",
     "multer": "^1.4.5-lts.1"
   }
 }
