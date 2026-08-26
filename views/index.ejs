@@ -139,16 +139,19 @@
         </div>
 
         <!-- CATEGORIES -->
+        <% const currentCat = (typeof selectedCategory !== 'undefined') ? selectedCategory : ''; %>
         <div class="categories">
-            <a href="/" class="cat-btn <%= !selectedCategory ? 'active' : '' %>">All Movies</a>
-            <% categories.forEach(cat => { %>
-                <a href="/?category=<%= cat %>" class="cat-btn <%= selectedCategory === cat ? 'active' : '' %>"><%= cat %></a>
-            <% }) %>
+            <a href="/" class="cat-btn <%= !currentCat ? 'active' : '' %>">All Movies</a>
+            <% if (typeof categories !== 'undefined' && categories.length > 0) { %>
+                <% categories.forEach(cat => { %>
+                    <a href="/?category=<%= cat %>" class="cat-btn <%= currentCat === cat ? 'active' : '' %>"><%= cat %></a>
+                <% }) %>
+            <% } %>
         </div>
 
         <!-- RECENTLY UPDATED -->
         <h3 class="section-title">RECENTLY UPDATED</h3>
-        <% if (recentMovies.length > 0) { %>
+        <% if (typeof recentMovies !== 'undefined' && recentMovies.length > 0) { %>
             <div class="grid">
                 <% recentMovies.forEach(movie => { %>
                     <a href="/movie/<%= movie.id %>" class="movie-card">
@@ -167,8 +170,8 @@
         <% } %>
 
         <!-- PAGINATION -->
-        <% if (totalPages > 1) { %>
-            <% let catQuery = selectedCategory ? `&category=${selectedCategory}` : ''; %>
+        <% if (typeof totalPages !== 'undefined' && totalPages > 1) { %>
+            <% let catQuery = currentCat ? `&category=${currentCat}` : ''; %>
             <div class="pagination">
                 <a href="/?page=<%= currentPage - 1 %><%= catQuery %>" class="page-link <%= currentPage === 1 ? 'disabled' : '' %>">&lt;</a>
                 <% for (let i = 1; i <= totalPages; i++) { %>
@@ -180,7 +183,7 @@
 
         <!-- POPULAR MOVIES -->
         <h3 class="section-title">POPULAR MOVIES</h3>
-        <% if (popularMovies.length > 0) { %>
+        <% if (typeof popularMovies !== 'undefined' && popularMovies.length > 0) { %>
             <div class="grid">
                 <% popularMovies.forEach(movie => { %>
                     <a href="/movie/<%= movie.id %>" class="movie-card">
