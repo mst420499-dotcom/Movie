@@ -359,7 +359,7 @@
         <!-- Search Form -->
         <div class="search-container">
             <form action="/" method="GET" class="search-form">
-                <input type="text" name="search" placeholder="Search movies..." value="<%= typeof searchQuery !== 'undefined' ? searchQuery : '' %>">
+                <input type="text" name="q" placeholder="Search movies..." value="<%= typeof searchQuery !== 'undefined' ? searchQuery : '' %>">
                 <button type="submit">Search</button>
             </form>
         </div>
@@ -387,7 +387,8 @@
                             <% if (movie.isPinned) { %>
                                 <span class="pinned-badge">📌 PINNED</span>
                             <% } else { %>
-                                <% if (unpinnedCounter < 3) { %>
+                                <!-- FIX: শুধুমাত্র ১ নম্বর পেজে প্রথম ৩টি unpinned মুভিতে NEW ব্যাজ শো করবে -->
+                                <% if ((typeof currentPage === 'undefined' || Number(currentPage) === 1) && unpinnedCounter < 3) { %>
                                     <span class="new-badge">NEW</span>
                                     <% unpinnedCounter++; %>
                                 <% } %>
@@ -426,7 +427,7 @@
         <% if (typeof totalPages !== 'undefined' && totalPages > 1) { %>
             <% 
                 let queryCategory = (typeof selectedCategory !== 'undefined' && selectedCategory && selectedCategory !== 'All') ? '&category=' + encodeURIComponent(selectedCategory) : '';
-                let querySearch = (typeof searchQuery !== 'undefined' && searchQuery) ? '&search=' + encodeURIComponent(searchQuery) : '';
+                let querySearch = (typeof searchQuery !== 'undefined' && searchQuery) ? '&q=' + encodeURIComponent(searchQuery) : '';
                 let extraParams = queryCategory + querySearch;
             %>
             <div class="pagination">
