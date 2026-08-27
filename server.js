@@ -7,9 +7,6 @@ const mongoose = require('mongoose');
 const app = express();
 const PORT = process.env.PORT || 10000;
 
-// Render-এর বিহাইন্ড-প্রক্সি সাপোর্ট (কুকি কাজ করার জন্য জরুরি)
-app.set('trust proxy', 1);
-
 // 🟢 MongoDB Connection (Render Environment Variable থেকে নেবে)
 const MONGO_URI = process.env.MONGO_URI;
 
@@ -61,15 +58,10 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/uploads', express.static(path.join(__dirname, 'public/uploads')));
 
-// 🟢 Session Configuration (সঠিকভাবে এডমিন লগইন সেশন সেভ হওয়ার জন্য আপডেটেড)
 app.use(session({
     secret: 'moviehouse_secret_key_123',
     resave: false,
-    saveUninitialized: false,
-    cookie: { 
-        secure: false, // Render/Localhost উভয় স্থানে কাজের জন্য false রাখা হয়েছে
-        maxAge: 24 * 60 * 60 * 1000 // ১ দিন লগইন থাকবে
-    }
+    saveUninitialized: true
 }));
 
 // 🟢 Multer Storage Setup
@@ -175,38 +167,24 @@ app.get('/search', async (req, res) => {
 
 // Admin Login GET
 app.get('/admin/login', (req, res) => {
-    if (req.session && req.session.isAdmin) {
-        return res.redirect('/admin');
-    }
     res.render('login', { error: null });
 });
 
-// Admin Login POST (সেশন সেভ হওয়ার পর রিডাইরেক্ট নিশ্চিত করা হয়েছে)
+// Admin Login POST
 app.post('/admin/login', async (req, res) => {
-    try {
-        const settings = await getSettings();
-        if (req.body.password === settings.adminPassword) {
-            req.session.isAdmin = true;
-            req.session.save((err) => {
-                if (err) {
-                    console.error("Session Save Error:", err);
-                    return res.render('login', { error: 'Session Error!' });
-                }
-                res.redirect('/admin');
-            });
-        } else {
-            res.render('login', { error: 'Wrong Password!' });
-        }
-    } catch (err) {
-        res.render('login', { error: 'Login Failed!' });
+    const settings = await getSettings();
+    if (req.body.password === settings.adminPassword) {
+        req.session.isAdmin = true;
+        res.redirect('/admin');
+    } else {
+        res.render('login', { error: 'Wrong Password!' });
     }
 });
 
 // Admin Logout
 app.get('/admin/logout', (req, res) => {
-    req.session.destroy(() => {
-        res.redirect('/admin/login');
-    });
+    req.session.destroy();
+    res.redirect('/admin/login');
 });
 
 // Admin Dashboard GET
