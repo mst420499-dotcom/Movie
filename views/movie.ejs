@@ -153,7 +153,17 @@
                 return url.includes('/e/') || url.includes('/embed/') || url.includes('tpead.net');
             }
             
-            let initialUrl = (movie.videoLinks && movie.videoLinks.length > 0) ? movie.videoLinks[0].url : '';
+            // Web Series Support: get default initial URL
+            let initialUrl = '';
+            if (movie.seasons && movie.seasons.length > 0 && movie.seasons[0].episodes && movie.seasons[0].episodes.length > 0) {
+                let firstEp = movie.seasons[0].episodes[0];
+                initialUrl = (firstEp.videoLinks && firstEp.videoLinks.length > 0) ? firstEp.videoLinks[0].url : (firstEp.videoUrl || '');
+            } else if (movie.videoLinks && movie.videoLinks.length > 0) {
+                initialUrl = movie.videoLinks[0].url;
+            } else if (movie.videoUrl) {
+                initialUrl = movie.videoUrl;
+            }
+
             let initialYouTubeEmbed = getYouTubeEmbedUrl(initialUrl);
             let initialIsEmbed = isGenericEmbed(initialUrl);
             let defaultPoster = 'https://via.placeholder.com/300x400?text=No+Poster';
@@ -181,28 +191,53 @@
             </div>
         </div>
 
-        <!-- Movie Details -->
+        <!-- Movie & Series Details -->
         <div class="movie-details">
             <p><strong>Category:</strong> <%= movie.category %></p>
             <p><strong>Views:</strong> <%= movie.views %></p>
 
-            <!-- Server Selection -->
-            <% if (movie.videoLinks && movie.videoLinks.length > 1) { %>
-                <div class="server-buttons">
-                    <strong>Select Server:</strong><br><br>
-                    <% movie.videoLinks.forEach((link, index) => { %>
-                        <button class="server-btn" onclick="switchVideoServer('<%= link.url %>')">
-                            <%= link.name || 'Server ' + (index + 1) %>
-                        </button>
+            <!-- Web Series Seasons & Episodes Selection -->
+            <% if (movie.seasons && movie.seasons.length > 0) { %>
+                <div class="server-buttons" style="margin-top: 20px;">
+                    <% movie.seasons.forEach((season, sIndex) => { %>
+                        <div style="margin-bottom: 15px;">
+                            <strong>Season <%= season.seasonNumber || (sIndex + 1) %>:</strong><br><br>
+                            <% if (season.episodes && season.episodes.length > 0) { %>
+                                <% season.episodes.forEach((ep, eIndex) => { %>
+                                    <% 
+                                        let epLinks = JSON.stringify(ep.videoLinks || [{ name: 'Server 1', url: ep.videoUrl || '' }]); 
+                                    %>
+                                    <button class="server-btn" onclick='loadEpisode(<%- epLinks %>)'>
+                                        Ep <%= ep.episodeNumber || (eIndex + 1) %>: <%= ep.title || ('Episode ' + (eIndex + 1)) %>
+                                    </button>
+                                <% }) %>
+                            <% } else { %>
+                                <p style="font-size: 13px; color: #888;">No episodes found in this season.</p>
+                            <% } %>
+                        </div>
                     <% }) %>
                 </div>
             <% } %>
+
+            <!-- Server Selection (Movie or Active Episode) -->
+            <div class="server-buttons" id="serverSelectionBox" style="<%= (movie.videoLinks && movie.videoLinks.length > 1) ? '' : 'display: none;' %>">
+                <strong>Select Server:</strong><br><br>
+                <div id="serverButtonsContainer">
+                    <% if (movie.videoLinks && movie.videoLinks.length > 1) { %>
+                        <% movie.videoLinks.forEach((link, index) => { %>
+                            <button class="server-btn" onclick="switchVideoServer('<%= link.url %>')">
+                                <%= link.name || 'Server ' + (index + 1) %>
+                            </button>
+                        <% }) %>
+                    <% } %>
+                </div>
+            </div>
         </div>
 
         <!-- Related Content -->
         <% if (typeof relatedMovies !== 'undefined' && relatedMovies.length > 0) { %>
             <div class="related-section">
-                <h3>Related Movies</h3>
+                <h3>Related Content</h3>
                 <div class="related-grid">
                     <% relatedMovies.forEach(rel => { %>
                         <a href="/movie/<%= rel._id %>" class="related-card">
@@ -222,12 +257,14 @@
     <!-- Dynamic Switching Scripts -->
     <script>
         function parseYouTubeUrl(url) {
+            if (!url) return null;
             let regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
             let match = url.match(regExp);
             return (match && match[2].length === 11) ? match[2] : null;
         }
 
         function switchVideoServer(url) {
+            if (!url) return;
             const mediaArea = document.getElementById('mediaArea');
             const controlsBox = document.getElementById('controlsBox');
             
@@ -244,9 +281,35 @@
                 mediaArea.innerHTML = `
                     <video id="mainVideo" controls autoplay poster="<%= movie.poster || 'https://via.placeholder.com/300x400?text=No+Poster' %>">
                         <source src="${url}" type="video/mp4">
+                        Your browser does not support the video element.
                     </video>
                 `;
                 if (controlsBox) controlsBox.style.display = 'flex';
+            }
+        }
+
+        function loadEpisode(links) {
+            if (!links || links.length === 0) return;
+            
+            // 1. Play first server of episode
+            switchVideoServer(links[0].url);
+
+            // 2. Render multi-server buttons for episode (if available)
+            const serverBox = document.getElementById('serverSelectionBox');
+            const container = document.getElementById('serverButtonsContainer');
+
+            if (links.length > 1) {
+                container.innerHTML = '';
+                links.forEach((link, idx) => {
+                    const btn = document.createElement('button');
+                    btn.className = 'server-btn';
+                    btn.innerText = link.name || ('Server ' + (idx + 1));
+                    btn.onclick = () => switchVideoServer(link.url);
+                    container.appendChild(btn);
+                });
+                serverBox.style.display = 'block';
+            } else {
+                serverBox.style.display = 'none';
             }
         }
 
