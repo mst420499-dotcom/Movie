@@ -2,18 +2,20 @@ const express = require('express');
 const mongoose = require('mongoose');
 const path = require('path');
 const multer = require('multer');
+const cookieParser = require('cookie-parser'); // কুঁকি হ্যান্ডেল করার জন্য
 
 const app = express();
 
-// Middleware & View Engine
+// Middleware Setup
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
+app.use(cookieParser());
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Multer Storage Configuration
+// Multer Storage
 const storage = multer.diskStorage({
     destination: (req, file, cb) => cb(null, 'uploads/'),
     filename: (req, file, cb) => cb(null, Date.now() + path.extname(file.originalname))
@@ -26,7 +28,7 @@ mongoose.connect(MONGO_URI)
     .then(() => console.log('MongoDB Connected Successfully'))
     .catch(err => console.error('MongoDB Connection Error:', err));
 
-// Database Schemas & Models
+// Schemas & Models
 const movieSchema = new mongoose.Schema({
     title: { type: String, required: true },
     poster: { type: String, required: true },
@@ -50,7 +52,7 @@ const Movie = mongoose.model('Movie', movieSchema);
 const Category = mongoose.model('Category', categorySchema);
 const Admin = mongoose.model('Admin', adminSchema);
 
-// Helper function to get categories
+// Helper function for Categories
 async function getCategories() {
     const cats = await Category.find().sort({ name: 1 });
     if (cats.length === 0) {
@@ -61,78 +63,95 @@ async function getCategories() {
     return cats.map(c => c.name);
 }
 
+// Helper to check default admin password
+async function checkAdminPassword(pass) {
+    let admin = await Admin.findOne();
+    if (!admin) {
+        admin = await Admin.create({ password: 'admin' }); // ডিফল্ট পাসওয়ার্ড 'admin'
+    }
+    return admin.password === pass;
+}
+
 // ================= FRONTEND ROUTES ================= //
 
-// 🟢 Homepage & Category Filter Route
 app.get(['/', '/category/:categoryName'], async (req, res) => {
     try {
         const page = Math.max(1, parseInt(req.query.page) || 1);
         const limit = 12;
         const skip = (page - 1) * limit;
-        
         const searchQuery = req.query.search ? req.query.search.trim() : '';
         const selectedCategory = req.params.categoryName || null;
 
         let query = {};
-        
-        // Search Filter
-        if (searchQuery) {
-            query.title = { $regex: searchQuery, $options: 'i' };
-        }
-        // Category Filter
-        else if (selectedCategory) {
-            query.category = selectedCategory;
-        }
+        if (searchQuery) query.title = { $regex: searchQuery, $options: 'i' };
+        else if (selectedCategory) query.category = selectedCategory;
 
         const totalMovies = await Movie.countDocuments(query);
         const totalPages = Math.ceil(totalMovies / limit) || 1;
 
-        const movies = await Movie.find(query)
-            .sort({ isPinned: -1, createdAt: -1 })
-            .skip(skip)
-            .limit(limit);
-
-        // Fetch Top Popular Movies (if on homepage without search/category)
-        let popularMovies = [];
-        if (!selectedCategory && !searchQuery) {
-            popularMovies = await Movie.find().sort({ views: -1 }).limit(6);
-        }
-
+        const movies = await Movie.find(query).sort({ isPinned: -1, createdAt: -1 }).skip(skip).limit(limit);
+        let popularMovies = (!selectedCategory && !searchQuery) ? await Movie.find().sort({ views: -1 }).limit(6) : [];
         const categories = await getCategories();
 
-        res.render('index', { 
-            movies, 
-            popularMovies,
-            categories, 
-            currentPage: page, 
-            totalPages,
-            selectedCategory,
-            searchQuery
-        });
+        res.render('index', { movies, popularMovies, categories, currentPage: page, totalPages, selectedCategory, searchQuery });
     } catch (err) {
         console.error("Homepage Error:", err);
         res.status(500).send("Internal Server Error");
     }
 });
 
-// 🟢 Single Movie / Series Details Route
 app.get('/movie/:id', async (req, res) => {
     try {
         const movie = await Movie.findById(req.params.id);
         if (!movie) return res.status(404).send("Movie not found");
-
         movie.views = (movie.views || 0) + 1;
         await movie.save();
         res.render('movie', { movie });
     } catch (err) {
-        console.error("Movie Details Error:", err);
         res.status(500).send("Internal Server Error");
     }
 });
 
-// ================= ADMIN ROUTES ================= //
+// ================= ADMIN AUTH & ROUTES ================= //
 
-app.get('/admin', async (req, res) => {
+// Admin Login Page Route
+app.get('/admin/login', (req, res) => {
+    res.render('admin-login', { err: req.query.err || null });
+});
+
+// Admin Login POST Route
+app.post('/admin/login', async (req, res) => {
+    try {
+        const { password } = req.body;
+        const isValid = await checkAdminPassword(password);
+        if (isValid) {
+            res.cookie('admin_auth', 'true', { httpOnly: true });
+            res.redirect('/admin');
+        } else {
+            res.redirect('/admin/login?err=Incorrect Password');
+        }
+    } catch (err) {
+        res.redirect('/admin/login?err=Login Failed');
+    }
+});
+
+// Admin Logout
+app.get('/admin/logout', (req, res) => {
+    res.clearCookie('admin_auth');
+    res.redirect('/admin/login');
+});
+
+// Admin Protection Middleware
+const isAdmin = (req, res, next) => {
+    if (req.cookies && req.cookies.admin_auth === 'true') {
+        next();
+    } else {
+        res.redirect('/admin/login');
+    }
+};
+
+// Admin Dashboard (Protected)
+app.get('/admin', isAdmin, async (req, res) => {
     try {
         const movies = await Movie.find().sort({ createdAt: -1 });
         const categories = await getCategories();
@@ -147,19 +166,14 @@ app.get('/admin', async (req, res) => {
             err: req.query.err || null
         });
     } catch (err) {
-        console.error("Admin Dashboard Error:", err);
         res.status(500).send("Internal Server Error");
     }
 });
 
-app.post('/admin/save-movie', upload.single('posterFile'), async (req, res) => {
+app.post('/admin/save-movie', isAdmin, upload.single('posterFile'), async (req, res) => {
     try {
         const { id, title, category, contentType, posterUrl, isPinned, linkName, linkUrl, epSeason, epNum, epName, epUrl } = req.body;
-
-        let poster = posterUrl;
-        if (req.file) {
-            poster = '/uploads/' + req.file.filename;
-        }
+        let poster = req.file ? '/uploads/' + req.file.filename : posterUrl;
 
         let videoLinks = [];
         if (Array.isArray(linkName)) {
@@ -177,23 +191,10 @@ app.post('/admin/save-movie', upload.single('posterFile'), async (req, res) => {
                 url: epUrl[index]
             })).filter(e => e.url);
         } else if (epName && epUrl) {
-            episodes.push({
-                season: Number(epSeason) || 1,
-                episodeNumber: Number(epNum) || 1,
-                name: epName,
-                url: epUrl
-            });
+            episodes.push({ season: Number(epSeason) || 1, episodeNumber: Number(epNum) || 1, name: epName, url: epUrl });
         }
 
-        const movieData = {
-            title,
-            category,
-            contentType,
-            isPinned: isPinned === 'on' || isPinned === true,
-            videoLinks,
-            episodes
-        };
-
+        const movieData = { title, category, contentType, isPinned: isPinned === 'on' || isPinned === true, videoLinks, episodes };
         if (poster) movieData.poster = poster;
 
         if (id) {
@@ -205,12 +206,11 @@ app.post('/admin/save-movie', upload.single('posterFile'), async (req, res) => {
             res.redirect('/admin?msg=New Content Added Successfully');
         }
     } catch (err) {
-        console.error("Save Content Error:", err);
         res.redirect('/admin?err=Failed to save content');
     }
 });
 
-app.post('/admin/toggle-pin/:id', async (req, res) => {
+app.post('/admin/toggle-pin/:id', isAdmin, async (req, res) => {
     try {
         const movie = await Movie.findById(req.params.id);
         if (movie) {
@@ -223,7 +223,7 @@ app.post('/admin/toggle-pin/:id', async (req, res) => {
     }
 });
 
-app.post('/admin/delete-movie/:id', async (req, res) => {
+app.post('/admin/delete-movie/:id', isAdmin, async (req, res) => {
     try {
         await Movie.findByIdAndDelete(req.params.id);
         res.redirect('/admin?msg=Content Deleted Successfully');
@@ -232,7 +232,7 @@ app.post('/admin/delete-movie/:id', async (req, res) => {
     }
 });
 
-app.post('/admin/add-category', async (req, res) => {
+app.post('/admin/add-category', isAdmin, async (req, res) => {
     try {
         const { categoryName } = req.body;
         if (categoryName) await Category.create({ name: categoryName.trim() });
@@ -242,7 +242,7 @@ app.post('/admin/add-category', async (req, res) => {
     }
 });
 
-app.post('/admin/delete-category', async (req, res) => {
+app.post('/admin/delete-category', isAdmin, async (req, res) => {
     try {
         const { categoryName } = req.body;
         await Category.deleteOne({ name: categoryName });
@@ -252,7 +252,7 @@ app.post('/admin/delete-category', async (req, res) => {
     }
 });
 
-app.post('/admin/change-password', async (req, res) => {
+app.post('/admin/change-password', isAdmin, async (req, res) => {
     try {
         const { oldPassword, newPassword } = req.body;
         let admin = await Admin.findOne();
@@ -268,10 +268,6 @@ app.post('/admin/change-password', async (req, res) => {
     } catch (err) {
         res.redirect('/admin?err=Password Update Failed');
     }
-});
-
-app.get('/admin/logout', (req, res) => {
-    res.redirect('/');
 });
 
 const PORT = process.env.PORT || 3000;
