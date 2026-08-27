@@ -7,10 +7,8 @@ const mongoose = require('mongoose');
 const app = express();
 const PORT = process.env.PORT || 10000;
 
-// 🟢 Render Proxy Setup (সেশন কুকির জন্য)
 app.set('trust proxy', 1);
 
-// 🟢 MongoDB Connection (Render Environment Variable থেকে নেবে)
 const MONGO_URI = process.env.MONGO_URI;
 
 if (!MONGO_URI) {
@@ -21,12 +19,19 @@ if (!MONGO_URI) {
         .catch(err => console.error('❌ MongoDB Connection Error:', err));
 }
 
-// 🟢 MongoDB Schemas & Models
+// 🟢 MongoDB Schemas (Episodes & Series Support Added)
 const movieSchema = new mongoose.Schema({
     title: String,
     category: String,
     poster: String,
+    contentType: { type: String, default: 'movie' }, // 'movie' or 'series'
     videoLinks: [{ name: String, url: String }],
+    episodes: [{                                    // Web Series এর Episode যুক্ত করার জন্য
+        season: Number,
+        episodeNumber: Number,
+        title: String,
+        url: String
+    }],
     isPinned: { type: Boolean, default: false },
     views: { type: Number, default: 0 },
     createdAt: { type: Date, default: Date.now }
@@ -34,33 +39,30 @@ const movieSchema = new mongoose.Schema({
 
 const settingsSchema = new mongoose.Schema({
     adminPassword: { type: String, default: "admin" },
-    categories: { type: [String], default: ["Drama", "Action", "Hindi Movie", "Bangla Movie", "Thriller"] }
+    categories: { type: [String], default: ["Drama", "Action", "Hindi Movie", "Bangla Movie", "Thriller", "Web Series"] }
 });
 
 const Movie = mongoose.model('Movie', movieSchema);
 const Settings = mongoose.model('Settings', settingsSchema);
 
-// 🟢 Helper Function for Default Settings
 async function getSettings() {
     try {
         let settings = await Settings.findOne();
         if (!settings) {
             settings = await Settings.create({
                 adminPassword: "admin",
-                categories: ["Drama", "Action", "Hindi Movie", "Bangla Movie", "Thriller"]
+                categories: ["Drama", "Action", "Hindi Movie", "Bangla Movie", "Thriller", "Web Series"]
             });
         }
         return settings;
     } catch (err) {
-        console.error("Settings Fetch Error:", err);
         return {
             adminPassword: "admin",
-            categories: ["Drama", "Action", "Hindi Movie", "Bangla Movie", "Thriller"]
+            categories: ["Drama", "Action", "Hindi Movie", "Bangla Movie", "Thriller", "Web Series"]
         };
     }
 }
 
-// 🟢 Express Configurations
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
@@ -69,17 +71,13 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/uploads', express.static(path.join(__dirname, 'public/uploads')));
 
-// 🟢 Session Configuration
 app.use(session({
     secret: 'moviehouse_secret_key_123',
     resave: false,
     saveUninitialized: false,
-    cookie: {
-        maxAge: 24 * 60 * 60 * 1000
-    }
+    cookie: { maxAge: 24 * 60 * 60 * 1000 }
 }));
 
-// 🟢 Multer Storage Setup
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
         cb(null, path.join(__dirname, 'public/uploads'));
@@ -90,7 +88,6 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage });
 
-// 🟢 Admin Auth Middleware
 function isAdmin(req, res, next) {
     if (req.session && req.session.isAdmin) {
         return next();
@@ -100,7 +97,6 @@ function isAdmin(req, res, next) {
 
 // ==================== PUBLIC ROUTES ====================
 
-// 🏠 Home Page (FIXED: movies, recentMovies, activeCat, searchQuery সব পাঠানো হয়েছে)
 app.get('/', async (req, res) => {
     try {
         const settings = await getSettings();
@@ -108,12 +104,8 @@ app.get('/', async (req, res) => {
         const searchQuery = (req.query.q || '').trim();
         
         let query = {};
-        if (selectedCategory) {
-            query.category = selectedCategory;
-        }
-        if (searchQuery) {
-            query.title = { $regex: searchQuery, $options: 'i' };
-        }
+        if (selectedCategory) query.category = selectedCategory;
+        if (searchQuery) query.title = { $regex: searchQuery, $options: 'i' };
 
         let allMovies = await Movie.find(query).sort({ isPinned: -1, createdAt: -1 }) || [];
 
@@ -130,19 +122,17 @@ app.get('/', async (req, res) => {
             selectedCategory,
             activeCat: selectedCategory,
             searchQuery: searchQuery || '',
-            movies: paginatedMovies,        // index.ejs line 327 এর জন্য
-            recentMovies: paginatedMovies,  // ব্যাকআপের জন্য
+            movies: paginatedMovies,
+            recentMovies: paginatedMovies,
             popularMovies,
             currentPage: page,
             totalPages
         });
     } catch (err) {
-        console.error("Home Route Error:", err);
         res.status(500).send('Server Error');
     }
 });
 
-// Single Movie View Page
 app.get('/movie/:id', async (req, res) => {
     try {
         const movie = await Movie.findById(req.params.id);
@@ -162,7 +152,6 @@ app.get('/movie/:id', async (req, res) => {
     }
 });
 
-// Search Route
 app.get('/search', async (req, res) => {
     try {
         const settings = await getSettings();
@@ -188,26 +177,18 @@ app.get('/search', async (req, res) => {
 
 // ==================== ADMIN ROUTES ====================
 
-// Admin Login GET
 app.get('/admin/login', (req, res) => {
-    if (req.session && req.session.isAdmin) {
-        return res.redirect('/admin');
-    }
+    if (req.session && req.session.isAdmin) return res.redirect('/admin');
     res.render('login', { error: null });
 });
 
-// Admin Login POST
 app.post('/admin/login', async (req, res) => {
     try {
         const settings = await getSettings();
         if (req.body.password === settings.adminPassword) {
             req.session.isAdmin = true;
-            
             req.session.save((err) => {
-                if (err) {
-                    console.error("Session Save Error:", err);
-                    return res.render('login', { error: 'Session Error!' });
-                }
+                if (err) return res.render('login', { error: 'Session Error!' });
                 res.redirect('/admin');
             });
         } else {
@@ -218,14 +199,10 @@ app.post('/admin/login', async (req, res) => {
     }
 });
 
-// Admin Logout
 app.get('/admin/logout', (req, res) => {
-    req.session.destroy(() => {
-        res.redirect('/admin/login');
-    });
+    req.session.destroy(() => res.redirect('/admin/login'));
 });
 
-// Admin Dashboard GET
 app.get('/admin', isAdmin, async (req, res) => {
     try {
         const settings = await getSettings();
@@ -244,82 +221,71 @@ app.get('/admin', isAdmin, async (req, res) => {
     }
 });
 
-// Change Password POST
-app.post('/admin/change-password', isAdmin, async (req, res) => {
-    const settings = await getSettings();
-    const { oldPassword, newPassword } = req.body;
-
-    if (oldPassword === settings.adminPassword) {
-        settings.adminPassword = newPassword;
-        await settings.save();
-        res.redirect('/admin?msg=Password+changed+successfully!');
-    } else {
-        res.redirect('/admin?err=Old+password+does+not+match!');
-    }
-});
-
-// Toggle Pin Status POST
-app.post('/admin/toggle-pin/:id', isAdmin, async (req, res) => {
-    const movie = await Movie.findById(req.params.id);
-    if (movie) {
-        movie.isPinned = !movie.isPinned;
-        await movie.save();
-    }
-    res.redirect('/admin');
-});
-
-// Add / Edit Movie POST
+// Save Movie / Series with Episodes
 app.post('/admin/save-movie', isAdmin, upload.single('posterFile'), async (req, res) => {
-    const { id, title, category, posterUrl, linkName, linkUrl, isPinned } = req.body;
+    const { id, title, category, contentType, posterUrl, linkName, linkUrl, epSeason, epNumber, epTitle, epUrl, isPinned } = req.body;
 
     let poster = posterUrl || '';
-    if (req.file) {
-        poster = '/uploads/' + req.file.filename;
-    }
+    if (req.file) poster = '/uploads/' + req.file.filename;
 
+    // Standard Video Links (For Movies)
     const videoLinks = [];
     if (Array.isArray(linkUrl)) {
         linkUrl.forEach((url, i) => {
-            if (url) {
-                videoLinks.push({ 
-                    name: (linkName && linkName[i]) ? linkName[i] : `Server ${i + 1}`, 
-                    url 
-                });
-            }
+            if (url) videoLinks.push({ name: (linkName && linkName[i]) ? linkName[i] : `Server ${i + 1}`, url });
         });
     } else if (linkUrl) {
         videoLinks.push({ name: linkName || 'Server 1', url: linkUrl });
     }
 
-    if (id) {
-        const updateData = { 
-            title, 
-            category, 
-            videoLinks, 
-            isPinned: isPinned === 'on' 
-        };
-        if (poster) updateData.poster = poster;
-        await Movie.findByIdAndUpdate(id, updateData);
-    } else {
-        await Movie.create({
-            title,
-            category,
-            poster: poster || 'https://via.placeholder.com/300x400?text=No+Poster',
-            videoLinks,
-            isPinned: isPinned === 'on'
+    // Web Series Episodes Handling
+    const episodes = [];
+    if (Array.isArray(epUrl)) {
+        epUrl.forEach((url, i) => {
+            if (url) {
+                episodes.push({
+                    season: (epSeason && epSeason[i]) ? parseInt(epSeason[i]) : 1,
+                    episodeNumber: (epNumber && epNumber[i]) ? parseInt(epNumber[i]) : (i + 1),
+                    title: (epTitle && epTitle[i]) ? epTitle[i] : `Episode ${i + 1}`,
+                    url
+                });
+            }
+        });
+    } else if (epUrl) {
+        episodes.push({
+            season: epSeason ? parseInt(epSeason) : 1,
+            episodeNumber: epNumber ? parseInt(epNumber) : 1,
+            title: epTitle || 'Episode 1',
+            url: epUrl
         });
     }
 
-    res.redirect('/admin?msg=Movie+saved+successfully!');
+    const movieData = {
+        title,
+        category,
+        contentType: contentType || 'movie',
+        videoLinks,
+        episodes,
+        isPinned: isPinned === 'on'
+    };
+
+    if (poster) movieData.poster = poster;
+
+    if (id) {
+        await Movie.findByIdAndUpdate(id, movieData);
+    } else {
+        if (!poster) movieData.poster = 'https://via.placeholder.com/300x400?text=No+Poster';
+        await Movie.create(movieData);
+    }
+
+    res.redirect('/admin?msg=Saved+successfully!');
 });
 
-// Delete Movie POST
 app.post('/admin/delete-movie/:id', isAdmin, async (req, res) => {
     await Movie.findByIdAndDelete(req.params.id);
     res.redirect('/admin');
 });
 
-// Add Category POST
 app.post('/admin/add-category', isAdmin, async (req, res) => {
     const settings = await getSettings();
     if (req.body.categoryName && !settings.categories.includes(req.body.categoryName)) {
@@ -329,7 +295,6 @@ app.post('/admin/add-category', isAdmin, async (req, res) => {
     res.redirect('/admin');
 });
 
-// Delete Category POST
 app.post('/admin/delete-category', isAdmin, async (req, res) => {
     const settings = await getSettings();
     settings.categories = settings.categories.filter(c => c !== req.body.categoryName);
@@ -337,7 +302,6 @@ app.post('/admin/delete-category', isAdmin, async (req, res) => {
     res.redirect('/admin');
 });
 
-// Server Start
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });
