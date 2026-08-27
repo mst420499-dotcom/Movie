@@ -3,283 +3,78 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MOVIEHOUSE - Stream Movies</title>
+    <title>Movie Streaming Platform</title>
     <style>
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #0b0e14;
-            color: #ffffff;
-            padding: 20px;
-        }
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Segoe UI', sans-serif; background: #0f172a; color: #fff; padding: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .navbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; flex-wrap: wrap; gap: 10px; }
+        .categories { display: flex; gap: 8px; flex-wrap: wrap; }
+        .cat-btn { padding: 6px 12px; background: #1e293b; color: #94a3b8; text-decoration: none; border-radius: 6px; font-size: 13px; }
+        .cat-btn.active { background: #10b981; color: #fff; font-weight: bold; }
+        .movie-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        .card { background: #1e293b; border-radius: 8px; overflow: hidden; position: relative; transition: transform 0.2s; }
+        .card:hover { transform: translateY(-5px); }
+        .card img { width: 100%; height: 260px; object-fit: cover; }
+        .card-body { padding: 12px; }
+        .card-title { font-size: 15px; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 5px; }
+        .card-meta { font-size: 12px; color: #94a3b8; }
+        .pin-badge { position: absolute; top: 8px; left: 8px; background: #f59e0b; color: #000; font-size: 10px; font-weight: bold; padding: 3px 6px; border-radius: 4px; }
         
-        /* Search Bar */
-        .search-container {
-            display: flex;
-            justify-content: center;
-            margin: 20px 0 30px 0;
-        }
-        .search-box {
-            display: flex;
-            width: 100%;
-            max-width: 500px;
-            background-color: #161b26;
-            border-radius: 25px;
-            overflow: hidden;
-            padding: 3px;
-        }
-        .search-box input {
-            flex: 1;
-            padding: 10px 20px;
-            border: none;
-            background: transparent;
-            color: #fff;
-            outline: none;
-            font-size: 14px;
-        }
-        .search-box button {
-            padding: 10px 25px;
-            border-radius: 20px;
-            border: none;
-            background-color: #00bcd4;
-            color: #fff;
-            font-weight: bold;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-        .search-box button:hover {
-            background-color: #00acc1;
-        }
-
-        /* Category Filter Buttons */
-        .categories {
-            display: flex;
-            justify-content: center;
-            gap: 10px;
-            margin-bottom: 35px;
-            flex-wrap: wrap;
-        }
-        .cat-btn {
-            background-color: #161b26;
-            color: #ffffff;
-            border: none;
-            padding: 8px 20px;
-            border-radius: 20px;
-            cursor: pointer;
-            text-decoration: none;
-            font-size: 14px;
-            transition: background 0.2s;
-        }
-        .cat-btn.active {
-            background-color: #00bcd4;
-            color: #fff;
-        }
-        .cat-btn:hover:not(.active) {
-            background-color: #202738;
-        }
-
-        /* Section Titles */
-        .section-title {
-            text-align: center;
-            font-size: 16px;
-            font-weight: bold;
-            letter-spacing: 1.5px;
-            margin: 30px 0 20px 0;
-            text-transform: uppercase;
-        }
-
-        /* Movie Grid & Card Styles */
-        .movie-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-            gap: 20px;
-            margin-bottom: 40px;
-        }
-        .movie-card {
-            background-color: #121824;
-            border-radius: 10px;
-            overflow: hidden;
-            text-decoration: none;
-            color: #fff;
-            position: relative;
-            display: flex;
-            flex-direction: column;
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-        .movie-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
-        }
-        .poster-container {
-            width: 100%;
-            height: 250px;
-            background-color: #1a2232;
-            position: relative;
-        }
-        .poster-container img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            display: block;
-        }
-        .pin-badge {
-            position: absolute;
-            top: 8px;
-            left: 8px;
-            background-color: #f59e0b;
-            color: #000;
-            font-size: 10px;
-            font-weight: bold;
-            padding: 3px 6px;
-            border-radius: 4px;
-            z-index: 2;
-        }
-        .views-badge {
-            position: absolute;
-            bottom: 8px;
-            right: 8px;
-            background-color: rgba(0, 0, 0, 0.75);
-            font-size: 11px;
-            padding: 3px 8px;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            color: #fff;
-        }
-        .movie-info {
-            padding: 12px;
-            text-align: center;
-            margin-top: auto;
-        }
-        .movie-info h4 {
-            font-size: 14px;
-            font-weight: bold;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
         /* Pagination Styles */
-        .pagination {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 12px;
-            margin: 30px 0;
-        }
-        .page-btn {
-            padding: 8px 18px;
-            background-color: #00bcd4;
-            color: #fff;
-            text-decoration: none;
-            border-radius: 6px;
-            font-weight: bold;
-            font-size: 14px;
-            transition: background 0.2s;
-        }
-        .page-btn:hover:not(.disabled) {
-            background-color: #00acc1;
-        }
-        .page-btn.disabled {
-            background-color: #161b26;
-            color: #555;
-            pointer-events: none;
-        }
-        .page-info {
-            font-size: 14px;
-            color: #aaa;
-        }
+        .pagination { display: flex; justify-content: center; align-items: center; gap: 10px; margin-top: 20px; }
+        .page-btn { padding: 8px 16px; background: #3b82f6; color: #fff; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 14px; }
+        .page-btn.disabled { background: #334155; color: #64748b; pointer-events: none; }
+        .page-info { font-size: 14px; color: #94a3b8; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <!-- Search Bar -->
-    <div class="search-container">
-        <form action="/" method="GET" class="search-box">
-            <input type="text" name="search" placeholder="Search movies..." value="<%= typeof searchQuery !== 'undefined' ? searchQuery : '' %>">
-            <button type="submit">Search</button>
-        </form>
-    </div>
-
-    <!-- Category Filters -->
-    <div class="categories">
-        <a href="/?page=1" class="cat-btn <%= (!selectedCategory || selectedCategory === 'All') ? 'active' : '' %>">All Movies</a>
-        <% if (typeof categories !== 'undefined' && categories.length > 0) { %>
+    <div class="navbar">
+        <h2>🎬 Movie Hub</h2>
+        <div class="categories">
+            <a href="/?page=1" class="cat-btn <%= selectedCategory === 'All' ? 'active' : '' %>">All</a>
             <% categories.forEach(cat => { %>
                 <a href="/?category=<%= encodeURIComponent(cat) %>&page=1" class="cat-btn <%= selectedCategory === cat ? 'active' : '' %>"><%= cat %></a>
             <% }) %>
-        <% } %>
+        </div>
     </div>
 
-    <!-- Recently Updated Section -->
-    <h3 class="section-title">RECENTLY UPDATED</h3>
+    <!-- Movies Grid -->
     <div class="movie-grid">
-        <% if (typeof movies !== 'undefined' && movies.length > 0) { %>
+        <% if (movies && movies.length > 0) { %>
             <% movies.forEach(movie => { %>
-                <a href="/movie/<%= movie._id || movie.id %>" class="movie-card">
-                    <div class="poster-container">
+                <a href="/movie/<%= movie.id %>" style="text-decoration: none; color: inherit;">
+                    <div class="card">
                         <% if (movie.isPinned) { %> <span class="pin-badge">PINNED</span> <% } %>
                         <img 
                             src="<%= movie.poster %>" 
                             alt="<%= movie.title %>"
                             onerror="this.onerror=null; this.src='https://via.placeholder.com/300x400?text=No+Image';"
                         >
-                        <span class="views-badge">👁 <%= movie.views || 0 %></span>
-                    </div>
-                    <div class="movie-info">
-                        <h4><%= movie.title %></h4>
+                        <div class="card-body">
+                            <div class="card-title"><%= movie.title %></div>
+                            <div class="card-meta"><%= movie.category %></div>
+                        </div>
                     </div>
                 </a>
             <% }) %>
         <% } else { %>
-            <p style="grid-column: 1/-1; text-align: center; color: #aaa; padding: 20px 0;">No movies found.</p>
+            <p style="grid-column: 1/-1; text-align: center; color: #94a3b8;">No movies found.</p>
         <% } %>
     </div>
 
-    <!-- Popular Movies Section -->
-    <% if (typeof popularMovies !== 'undefined' && popularMovies.length > 0) { %>
-        <h3 class="section-title">POPULAR MOVIES</h3>
-        <div class="movie-grid">
-            <% popularMovies.forEach(movie => { %>
-                <a href="/movie/<%= movie._id || movie.id %>" class="movie-card">
-                    <div class="poster-container">
-                        <% if (movie.isPinned) { %> <span class="pin-badge">PINNED</span> <% } %>
-                        <img 
-                            src="<%= movie.poster %>" 
-                            alt="<%= movie.title %>"
-                            onerror="this.onerror=null; this.src='https://via.placeholder.com/300x400?text=No+Image';"
-                        >
-                        <span class="views-badge">👁 <%= movie.views || 0 %></span>
-                    </div>
-                    <div class="movie-info">
-                        <h4><%= movie.title %></h4>
-                    </div>
-                </a>
-            <% }) %>
-        </div>
-    <% } %>
-
     <!-- Pagination Controls -->
-    <% if (typeof totalPages !== 'undefined' && totalPages > 1) { %>
+    <% if (totalPages > 1) { %>
         <div class="pagination">
-            <% const catParam = (selectedCategory && selectedCategory !== 'All') ? '&category=' + encodeURIComponent(selectedCategory) : ''; %>
-            <% const searchParam = (typeof searchQuery !== 'undefined' && searchQuery) ? '&search=' + encodeURIComponent(searchQuery) : ''; %>
+            <% const catParam = selectedCategory && selectedCategory !== 'All' ? '&category=' + encodeURIComponent(selectedCategory) : ''; %>
             
-            <a href="/?page=<%= currentPage - 1 %><%= catParam %><%= searchParam %>" class="page-btn <%= currentPage <= 1 ? 'disabled' : '' %>">← Previous</a>
+            <a href="/?page=<%= currentPage - 1 %><%= catParam %>" class="page-btn <%= currentPage <= 1 ? 'disabled' : '' %>">← Previous</a>
             
             <span class="page-info">Page <%= currentPage %> of <%= totalPages %></span>
             
-            <a href="/?page=<%= currentPage + 1 %><%= catParam %><%= searchParam %>" class="page-btn <%= currentPage >= totalPages ? 'disabled' : '' %>">Next →</a>
+            <a href="/?page=<%= currentPage + 1 %><%= catParam %>" class="page-btn <%= currentPage >= totalPages ? 'disabled' : '' %>">Next →</a>
         </div>
     <% } %>
 </div>
