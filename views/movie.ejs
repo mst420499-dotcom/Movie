@@ -3,243 +3,139 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><%= movie.title %></title>
-    <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
-            background: #121212; 
-            color: #ffffff; 
-            padding: 20px 15px; 
-        }
-
-        .container { max-width: 900px; margin: 0 auto; }
-
-        .back-link { 
-            display: inline-block; 
-            color: #94a3b8; 
-            text-decoration: none; 
-            font-size: 14px; 
-            margin-bottom: 20px; 
-        }
-        .back-link:hover { color: #fff; }
-
-        .movie-title { 
-            font-size: 22px; 
-            font-weight: 700; 
-            margin-bottom: 15px; 
-        }
-
-        /* Player Container */
-        .player-card { 
-            background: #1e1e1e; 
-            border-radius: 8px; 
-            overflow: hidden; 
-            margin-bottom: 25px; 
-        }
-        
-        .video-wrapper { 
-            position: relative; 
-            padding-bottom: 56.25%; 
-            height: 0; 
-            background: #000; 
-        }
-        .video-wrapper iframe, .video-wrapper video { 
-            position: absolute; 
-            top: 0; 
-            left: 0; 
-            width: 100%; 
-            height: 100%; 
-            border: 0; 
-            outline: none;
-        }
-
-        /* 5 Sec Skip Buttons */
-        .controls-bar { 
-            display: flex; 
-            justify-content: center; 
-            gap: 10px; 
-            padding: 12px; 
-            background: #1e1e1e; 
-        }
-        .btn-skip { 
-            background: #e50914; 
-            color: #ffffff; 
-            border: none; 
-            padding: 6px 14px; 
-            border-radius: 4px; 
-            font-size: 13px; 
-            font-weight: bold; 
-            cursor: pointer; 
-        }
-        .btn-skip:hover { background: #b80710; }
-
-        /* Details & Server Options */
-        .details-card { 
-            background: #1e1e1e; 
-            padding: 20px; 
-            border-radius: 8px; 
-            margin-bottom: 25px; 
-        }
-        .details-card p { margin-bottom: 8px; font-size: 15px; color: #e2e8f0; }
-
-        .server-title { 
-            font-size: 15px; 
-            font-weight: bold; 
-            margin-top: 15px; 
-            margin-bottom: 10px; 
-        }
-
-        .btn-group { display: flex; gap: 8px; flex-wrap: wrap; }
-        .btn-server { 
-            background: #2d3748; 
-            color: #ffffff; 
-            border: 1px solid #4a5568; 
-            padding: 6px 14px; 
-            border-radius: 4px; 
-            cursor: pointer; 
-            font-size: 13px; 
-        }
-        .btn-server.active { 
-            background: #4a5568; 
-            border-color: #718096; 
-        }
-
-        /* Related Movies Grid */
-        .section-title { font-size: 18px; font-weight: bold; margin-bottom: 15px; }
-        .related-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 15px; }
-        .movie-card { background: #1e1e1e; border-radius: 6px; overflow: hidden; text-decoration: none; color: #fff; display: block; }
-        .movie-card img { width: 100%; height: 180px; object-fit: cover; display: block; }
-        .movie-card .info { padding: 8px; font-size: 12px; line-height: 1.3; }
-    </style>
+    <title><%= movie.title %> - MovieHouse</title>
+    <link rel="stylesheet" href="/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
 
-<div class="container">
-    <a href="/" class="back-link">← Back to Home</a>
-
-    <h1 class="movie-title"><%= movie.title %></h1>
-
-    <!-- Player Area -->
-    <div class="player-card">
-        <div class="video-wrapper" id="playerContainer">
-            <!-- Video/Iframe Dynamic Loader -->
+    <!-- Header / Navbar -->
+    <header class="navbar">
+        <div class="logo">
+            <a href="/">🎬 MovieHouse</a>
         </div>
-        
-        <div class="controls-bar">
-            <button class="btn-skip" onclick="skipTime(-5)">⏪ 5 Sec</button>
-            <button class="btn-skip" onclick="skipTime(5)">5 Sec ⏩</button>
+        <form action="/search" method="GET" class="search-form">
+            <input type="text" name="q" placeholder="মুভি বা সিরিজ খুঁজুন..." required>
+            <button type="submit"><i class="fas fa-search"></i></button>
+        </form>
+    </header>
+
+    <div class="container main-content">
+        <div class="movie-details-wrapper">
+            
+            <!-- Movie Title -->
+            <h1 class="movie-title"><%= movie.title %></h1>
+            <div class="movie-meta">
+                <span><i class="fas fa-folder"></i> <%= movie.category %></span>
+                <span><i class="fas fa-eye"></i> <%= movie.views %> Views</span>
+                <span><i class="fas fa-calendar-alt"></i> <%= new Date(movie.createdAt).toLocaleDateString() %></span>
+            </div>
+
+            <!-- Main Player Section (All Video & Embed Link Support) -->
+            <div class="player-container" style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; background: #000; border-radius: 8px; margin-bottom: 20px;">
+                <% 
+                    let initialUrl = '';
+                    if (movie.videoLinks && movie.videoLinks.length > 0) {
+                        initialUrl = movie.videoLinks[0].url;
+                    } else if (movie.episodes && movie.episodes.length > 0) {
+                        initialUrl = movie.episodes[0].url;
+                    }
+                %>
+                <iframe 
+                    id="main-player" 
+                    src="<%= initialUrl %>" 
+                    style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0;" 
+                    allowfullscreen 
+                    scrolling="no"
+                    allow="autoplay; encrypted-media; picture-in-picture; accelerometer; clipboard-write; gyroscope">
+                </iframe>
+            </div>
+
+            <!-- Server / Source Links (Movie Video Links) -->
+            <% if (movie.videoLinks && movie.videoLinks.length > 1) { %>
+                <div class="server-selection-box" style="margin-bottom: 25px;">
+                    <h3><i class="fas fa-server"></i> Select Server:</h3>
+                    <div class="server-buttons" style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px;">
+                        <% movie.videoLinks.forEach((link, index) => { %>
+                            <button 
+                                class="btn-server <%= index === 0 ? 'active' : '' %>" 
+                                onclick="changePlayerSource('<%= link.url %>', this)">
+                                <i class="fas fa-play-circle"></i> <%= link.name || ('Server ' + (index + 1)) %>
+                            </button>
+                        <% }) %>
+                    </div>
+                </div>
+            <% } %>
+
+            <!-- Web Series Episodes Section -->
+            <% if (movie.episodes && movie.episodes.length > 0) { %>
+                <div class="episodes-container-box" style="margin-bottom: 30px; background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px;">
+                    <h3 style="margin-bottom: 15px;"><i class="fas fa-list-ul"></i> Episodes & Seasons:</h3>
+                    
+                    <div class="episodes-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px;">
+                        <% movie.episodes.forEach((ep, index) => { %>
+                            <button 
+                                class="btn-episode <%= index === 0 ? 'active' : '' %>" 
+                                onclick="changePlayerSource('<%= ep.url %>', this)"
+                                style="padding: 10px; border: 1px solid rgba(255,255,255,0.2); background: #1f1f1f; color: #fff; border-radius: 5px; cursor: pointer; text-align: left;">
+                                <strong>S<%= ep.season || 1 %> E<%= ep.episodeNumber || (index + 1) %></strong>
+                                <div style="font-size: 12px; opacity: 0.8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                    <%= ep.title || ('Episode ' + (index + 1)) %>
+                                </div>
+                            </button>
+                        <% }) %>
+                    </div>
+                </div>
+            <% } %>
+
+            <!-- Movie Poster & Details Info -->
+            <div class="details-grid" style="display: flex; gap: 20px; margin-top: 20px; flex-wrap: wrap;">
+                <div class="poster-box" style="max-width: 250px; flex: 1;">
+                    <img src="<%= movie.poster %>" alt="<%= movie.title %>" style="width: 100%; border-radius: 8px;">
+                </div>
+                <div class="info-box" style="flex: 2; min-width: 280px;">
+                    <h2><%= movie.title %></h2>
+                    <p>Category: <strong><%= movie.category %></strong></p>
+                    <p>Total Views: <strong><%= movie.views %></strong></p>
+                </div>
+            </div>
+
+            <!-- Related Movies Section -->
+            <% if (relatedMovies && relatedMovies.length > 0) { %>
+                <div class="related-movies-section" style="margin-top: 40px;">
+                    <h3><i class="fas fa-film"></i> Related Content</h3>
+                    <div class="movie-grid">
+                        <% relatedMovies.forEach(rel => { %>
+                            <a href="/movie/<%= rel._id %>" class="movie-card">
+                                <img src="<%= rel.poster %>" alt="<%= rel.title %>">
+                                <div class="card-info">
+                                    <h4><%= rel.title %></h4>
+                                </div>
+                            </a>
+                        <% }) %>
+                    </div>
+                </div>
+            <% } %>
+
         </div>
     </div>
 
-    <!-- Details Card -->
-    <div class="details-card">
-        <p><strong>Category:</strong> <%= movie.category %></p>
-        <p><strong>Views:</strong> <%= movie.views %></p>
-
-        <% if (movie.contentType === 'series' && movie.episodes && movie.episodes.length > 0) { %>
-            <div class="server-title">Select Episode:</div>
-            <div class="btn-group">
-                <% movie.episodes.forEach((ep, idx) => { %>
-                    <button class="btn-server <%= idx === 0 ? 'active' : '' %>" onclick="playMedia(this, '<%= ep.url %>')">
-                        S<%= ep.season %> E<%= ep.episodeNumber %>: <%= ep.name %>
-                    </button>
-                <% }) %>
-            </div>
-        <% } else if (movie.videoLinks && movie.videoLinks.length > 0) { %>
-            <div class="server-title">Select Server:</div>
-            <div class="btn-group">
-                <% movie.videoLinks.forEach((link, idx) => { %>
-                    <button class="btn-server <%= idx === 0 ? 'active' : '' %>" onclick="playMedia(this, '<%= link.url %>')">
-                        <%= link.name %>
-                    </button>
-                <% }) %>
-            </div>
-        <% } %>
-    </div>
-
-    <!-- Related Movies Section -->
-    <% if (typeof relatedMovies !== 'undefined' && relatedMovies.length > 0) { %>
-        <h3 class="section-title">Related Movies</h3>
-        <div class="related-grid">
-            <% relatedMovies.forEach(rel => { %>
-                <a href="/movie/<%= rel._id %>" class="movie-card">
-                    <img src="<%= rel.poster %>" alt="<%= rel.title %>">
-                    <div class="info"><strong><%= rel.title %></strong></div>
-                </a>
-            <% }) %>
-        </div>
-    <% } %>
-</div>
-
-<script>
-    function playMedia(btn, url) {
-        const container = document.getElementById('playerContainer');
-        const cleanUrl = url.trim();
-
-        const isEmbedSite = cleanUrl.includes('youtube.com') || 
-                             cleanUrl.includes('youtu.be') || 
-                             cleanUrl.includes('streamtape.com') || 
-                             cleanUrl.includes('dailymotion.com');
-
-        if (!isEmbedSite) {
-            container.innerHTML = `<video id="videoPlayer" controls autoplay style="width:100%; height:100%;">
-                <source src="${cleanUrl}">
-                Your browser does not support HTML5 video.
-            </video>`;
-        } else {
-            let embedUrl = cleanUrl;
-            if (cleanUrl.includes('youtube.com/watch?v=')) {
-                const videoId = cleanUrl.split('v=')[1].split('&')[0];
-                embedUrl = 'https://www.youtube.com/embed/' + videoId + '?autoplay=1';
-            } else if (cleanUrl.includes('youtu.be/')) {
-                const videoId = cleanUrl.split('youtu.be/')[1].split('?')[0];
-                embedUrl = 'https://www.youtube.com/embed/' + videoId + '?autoplay=1';
+    <!-- Dynamic Player Switch Script -->
+    <script>
+        function changePlayerSource(videoUrl, element) {
+            const player = document.getElementById('main-player');
+            if (player && videoUrl) {
+                player.src = videoUrl;
             }
-
-            container.innerHTML = `<iframe id="videoPlayer" src="${embedUrl}" allowfullscreen allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"></iframe>`;
-        }
-
-        document.querySelectorAll('.btn-server').forEach(b => b.classList.remove('active'));
-        if (btn) btn.classList.add('active');
-    }
-
-    // 🟢 কাস্টম স্কিপ ফাংশন (কন্ট্রোল নিশ্চিত করার জন্য)
-    function skipTime(seconds) {
-        const video = document.getElementById('videoPlayer');
-        if (video && video.tagName.toLowerCase() === 'video') {
-            let newTime = video.currentTime + seconds;
             
-            // সীমার বাইরে যাতে না যায়
-            if (newTime < 0) newTime = 0;
-            if (newTime > video.duration) newTime = video.duration;
-
-            video.currentTime = newTime;
-        }
-    }
-
-    // 🟢 ব্রাউজারের ডিফল্ট স্কিপ ব্লক করে ফিক্সড ৫ সেকেন্ড সেট করা
-    window.addEventListener('keydown', function(e) {
-        if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
-            const video = document.getElementById('videoPlayer');
-            
-            if (video && video.tagName.toLowerCase() === 'video') {
-                e.preventDefault(); // ব্রাউজারের নিজস্ব ২৫ সেকেন্ড স্কিপ ব্লক করবে
-                
-                if (e.key === "ArrowLeft") {
-                    skipTime(-5);
-                } else if (e.key === "ArrowRight") {
-                    skipTime(5);
-                }
+            // Active class toggle for buttons
+            const parent = element.parentElement;
+            if (parent) {
+                const siblings = parent.querySelectorAll('button');
+                siblings.forEach(btn => btn.classList.remove('active'));
             }
+            element.classList.add('active');
         }
-    }, true); // `true` ফ্লাগ দিয়ে Event Capturing অন করা হয়েছে
-
-    document.addEventListener("DOMContentLoaded", function() {
-        const firstBtn = document.querySelector('.btn-server');
-        if (firstBtn) firstBtn.click();
-    });
-</script>
-
+    </script>
 </body>
 </html>
