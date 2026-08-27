@@ -139,24 +139,32 @@
         
         <h2 class="movie-title"><%= movie.title %></h2>
 
-        <!-- EJS Helper Function for Video Links -->
+        <!-- EJS Helper Functions -->
         <% 
             function getYouTubeEmbedUrl(url) {
-                if (!url) return '';
+                if (!url) return null;
                 let regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
                 let match = url.match(regExp);
                 return (match && match[2].length === 11) ? 'https://www.youtube.com/embed/' + match[2] : null;
             }
+
+            function isGenericEmbed(url) {
+                if (!url) return false;
+                return url.includes('/e/') || url.includes('/embed/') || url.includes('tpead.net');
+            }
             
             let initialUrl = (movie.videoLinks && movie.videoLinks.length > 0) ? movie.videoLinks[0].url : '';
             let initialYouTubeEmbed = getYouTubeEmbedUrl(initialUrl);
+            let initialIsEmbed = isGenericEmbed(initialUrl);
         %>
 
-        <!-- Main Video Box -->
+        <!-- Main Video Container -->
         <div class="video-player-box">
             <div id="mediaArea">
                 <% if (initialYouTubeEmbed) { %>
                     <iframe id="ytPlayer" src="<%= initialYouTubeEmbed %>" allowfullscreen allow="autoplay"></iframe>
+                <% } else if (initialIsEmbed) { %>
+                    <iframe id="embedPlayer" src="<%= initialUrl %>" allowfullscreen allow="autoplay" scrolling="no"></iframe>
                 <% } else { %>
                     <video id="mainVideo" controls poster="<%= movie.poster %>">
                         <source src="<%= initialUrl %>" type="video/mp4">
@@ -165,19 +173,19 @@
                 <% } %>
             </div>
 
-            <!-- Skip Controls for HTML5 Video -->
-            <div class="player-controls" id="controlsBox" style="<%= initialYouTubeEmbed ? 'display: none;' : '' %>">
+            <!-- Custom Controls (Direct MP4 এর ক্ষেত্রে সক্রিয় থাকবে) -->
+            <div class="player-controls" id="controlsBox" style="<%= (initialYouTubeEmbed || initialIsEmbed) ? 'display: none;' : '' %>">
                 <button class="control-btn" onclick="rewind(5)">⏪ 5 Sec</button>
                 <button class="control-btn" onclick="forward(5)">5 Sec ⏩</button>
             </div>
         </div>
 
-        <!-- Movie Details -->
+        <!-- Movie Information -->
         <div class="movie-details">
             <p><strong>Category:</strong> <%= movie.category %></p>
             <p><strong>Views:</strong> <%= movie.views %></p>
 
-            <!-- Server Selection -->
+            <!-- Server Switching Options -->
             <% if (movie.videoLinks && movie.videoLinks.length > 1) { %>
                 <div class="server-buttons">
                     <strong>Select Server:</strong><br><br>
@@ -190,7 +198,7 @@
             <% } %>
         </div>
 
-        <!-- Related Movies Grid -->
+        <!-- Related Content -->
         <% if (typeof relatedMovies !== 'undefined' && relatedMovies.length > 0) { %>
             <div class="related-section">
                 <h3>Related Movies</h3>
@@ -206,7 +214,7 @@
         <% } %>
     </div>
 
-    <!-- Client-side JavaScript -->
+    <!-- Dynamic Switching Scripts -->
     <script>
         function parseYouTubeUrl(url) {
             let regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
@@ -217,14 +225,19 @@
         function switchVideoServer(url) {
             const mediaArea = document.getElementById('mediaArea');
             const controlsBox = document.getElementById('controlsBox');
+            
             const ytId = parseYouTubeUrl(url);
+            const isEmbedLink = url.includes('/e/') || url.includes('/embed/') || url.includes('tpead.net');
 
             if (ytId) {
                 mediaArea.innerHTML = `<iframe id="ytPlayer" src="https://www.youtube.com/embed/${ytId}?autoplay=1" allowfullscreen allow="autoplay"></iframe>`;
                 if (controlsBox) controlsBox.style.display = 'none';
+            } else if (isEmbedLink) {
+                mediaArea.innerHTML = `<iframe id="embedPlayer" src="${url}" allowfullscreen allow="autoplay" scrolling="no"></iframe>`;
+                if (controlsBox) controlsBox.style.display = 'none';
             } else {
                 mediaArea.innerHTML = `
-                    <video id="mainVideo" controls autoplay>
+                    <video id="mainVideo" controls autoplay poster="<%= movie.poster %>">
                         <source src="${url}" type="video/mp4">
                     </video>
                 `;
@@ -247,7 +260,6 @@
             }
         }
 
-        // Keyboard Shortcuts (Arrow key 5 sec skip)
         window.addEventListener('keydown', function (e) {
             const video = document.getElementById('mainVideo');
             if (!video) return;
