@@ -99,6 +99,9 @@
         .server-btn:hover {
             background-color: #555;
         }
+        .server-btn.active {
+            background-color: #e50914;
+        }
         .related-section {
             margin-top: 30px;
         }
@@ -139,7 +142,7 @@
         
         <h2 class="movie-title"><%= movie.title %></h2>
 
-        <!-- EJS Helper Functions -->
+        <!-- EJS Helper Functions & Initial Load -->
         <% 
             function getYouTubeEmbedUrl(url) {
                 if (!url || typeof url !== 'string') return null;
@@ -150,26 +153,21 @@
 
             function isGenericEmbed(url) {
                 if (!url || typeof url !== 'string') return false;
-                return url.includes('/e/') || url.includes('/embed/') || url.includes('tpead.net') || url.includes('drive.google.com') || url.includes('iframe');
+                return url.includes('/e/') || url.includes('/embed/') || url.includes('tpead.net') || url.includes('drive.google.com');
             }
             
-            // Robust initial URL extraction for both Movies & Web Series
+            // Extract Initial URL
             let initialUrl = '';
-            if (movie.videoLinks && movie.videoLinks.length > 0 && movie.videoLinks[0].url) {
+            if (movie.seasons && movie.seasons.length > 0 && movie.seasons[0].episodes && movie.seasons[0].episodes.length > 0) {
+                let firstEp = movie.seasons[0].episodes[0];
+                initialUrl = typeof firstEp === 'string' ? firstEp : (firstEp.url || firstEp.videoUrl || firstEp.embedUrl || firstEp.link || '');
+            } else if (movie.episodes && movie.episodes.length > 0) {
+                let firstEp = movie.episodes[0];
+                initialUrl = typeof firstEp === 'string' ? firstEp : (firstEp.url || firstEp.videoUrl || firstEp.embedUrl || firstEp.link || '');
+            } else if (movie.videoLinks && movie.videoLinks.length > 0) {
                 initialUrl = movie.videoLinks[0].url;
             } else if (movie.videoUrl) {
                 initialUrl = movie.videoUrl;
-            } else if (movie.embedUrl) {
-                initialUrl = movie.embedUrl;
-            } else if (movie.seasons && movie.seasons.length > 0) {
-                let firstSeason = movie.seasons[0];
-                let firstEp = (firstSeason.episodes && firstSeason.episodes.length > 0) ? firstSeason.episodes[0] : null;
-                if (firstEp) {
-                    initialUrl = firstEp.url || firstEp.videoUrl || firstEp.embedUrl || (firstEp.videoLinks && firstEp.videoLinks[0] ? firstEp.videoLinks[0].url : '');
-                }
-            } else if (movie.episodes && movie.episodes.length > 0) {
-                let firstEp = movie.episodes[0];
-                initialUrl = firstEp.url || firstEp.videoUrl || firstEp.embedUrl || (firstEp.videoLinks && firstEp.videoLinks[0] ? firstEp.videoLinks[0].url : '');
             }
 
             let initialYouTubeEmbed = getYouTubeEmbedUrl(initialUrl);
@@ -204,35 +202,38 @@
             <p><strong>Category:</strong> <%= movie.category %></p>
             <p><strong>Views:</strong> <%= movie.views %></p>
 
-            <!-- Web Series Support (Seasons Structure) -->
+            <!-- Seasons Selection -->
             <% if (movie.seasons && movie.seasons.length > 0) { %>
-                <div class="server-buttons" style="margin-top: 15px;">
-                    <% movie.seasons.forEach((season, sIndex) => { %>
-                        <div style="margin-bottom: 12px;">
-                            <strong>Season <%= season.seasonNumber || (sIndex + 1) %>:</strong><br><br>
-                            <% if (season.episodes && season.episodes.length > 0) { %>
-                                <% season.episodes.forEach((ep, eIndex) => { %>
-                                    <% let epUrl = ep.url || ep.videoUrl || ep.embedUrl || (ep.videoLinks && ep.videoLinks[0] ? ep.videoLinks[0].url : ''); %>
-                                    <button class="server-btn" onclick="switchVideoServer('<%= epUrl %>')">
-                                        <%= ep.title || ('Ep ' + (ep.episodeNumber || (eIndex + 1))) %>
-                                    </button>
-                                <% }) %>
-                            <% } %>
-                        </div>
-                    <% }) %>
+                <div class="server-buttons">
+                    <strong>Seasons:</strong><br><br>
+                    <div id="seasonButtonsBox">
+                        <% movie.seasons.forEach((season, sIndex) => { %>
+                            <button class="server-btn season-btn <%= sIndex === 0 ? 'active' : '' %>" onclick="showEpisodes(<%= sIndex %>)">
+                                <%= season.title || ('Season ' + (season.seasonNumber || (sIndex + 1))) %>
+                            </button>
+                        <% }) %>
+                    </div>
                 </div>
-            <% } %>
 
-            <!-- Web Series Support (Direct Episodes Array) -->
-            <% if (movie.episodes && movie.episodes.length > 0) { %>
+                <!-- Episodes Selection Container (Dynamic) -->
                 <div class="server-buttons" style="margin-top: 15px;">
                     <strong>Episodes:</strong><br><br>
-                    <% movie.episodes.forEach((ep, eIndex) => { %>
-                        <% let epUrl = ep.url || ep.videoUrl || ep.embedUrl || (ep.videoLinks && ep.videoLinks[0] ? ep.videoLinks[0].url : ''); %>
-                        <button class="server-btn" onclick="switchVideoServer('<%= epUrl %>')">
-                            <%= ep.title || ('Episode ' + (eIndex + 1)) %>
-                        </button>
-                    <% }) %>
+                    <div id="episodesButtonsBox"></div>
+                </div>
+            <% } else if (movie.episodes && movie.episodes.length > 0) { %>
+                <!-- Fallback Direct Episodes -->
+                <div class="server-buttons">
+                    <strong>Episodes:</strong><br><br>
+                    <div>
+                        <% movie.episodes.forEach((ep, eIndex) => { %>
+                            <% 
+                                let epUrl = typeof ep === 'string' ? ep : (ep.url || ep.videoUrl || ep.embedUrl || ep.link || ''); 
+                            %>
+                            <button class="server-btn" onclick="switchVideoServer('<%= epUrl %>')">
+                                <%= (ep && ep.title) ? ep.title : ('Episode ' + (eIndex + 1)) %>
+                            </button>
+                        <% }) %>
+                    </div>
                 </div>
             <% } %>
 
@@ -269,8 +270,10 @@
         <% } %>
     </div>
 
-    <!-- Dynamic Switching Scripts -->
+    <!-- Scripts -->
     <script>
+        const movieData = <%- JSON.stringify(movie) %>;
+
         function parseYouTubeUrl(url) {
             if (!url || typeof url !== 'string') return null;
             let regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
@@ -302,6 +305,45 @@
                 if (controlsBox) controlsBox.style.display = 'flex';
             }
         }
+
+        function showEpisodes(seasonIndex) {
+            const episodesContainer = document.getElementById('episodesButtonsBox');
+            if (!episodesContainer || !movieData.seasons || !movieData.seasons[seasonIndex]) return;
+
+            // Highlight active season button
+            const seasonButtons = document.querySelectorAll('.season-btn');
+            seasonButtons.forEach((btn, idx) => {
+                if (idx === seasonIndex) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+
+            const episodes = movieData.seasons[seasonIndex].episodes || [];
+            episodesContainer.innerHTML = '';
+
+            if (episodes.length === 0) {
+                episodesContainer.innerHTML = '<span style="color:#aaa; font-size:13px;">No episodes found.</span>';
+                return;
+            }
+
+            episodes.forEach((ep, eIndex) => {
+                let epUrl = typeof ep === 'string' ? ep : (ep.url || ep.videoUrl || ep.embedUrl || ep.link || '');
+                const btn = document.createElement('button');
+                btn.className = 'server-btn';
+                btn.innerText = (ep && ep.title) ? ep.title : ('Episode ' + (ep.episodeNumber || (eIndex + 1)));
+                btn.onclick = () => switchVideoServer(epUrl);
+                episodesContainer.appendChild(btn);
+            });
+        }
+
+        // Automatically load Season 1 episodes on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            if (movieData.seasons && movieData.seasons.length > 0) {
+                showEpisodes(0);
+            }
+        });
 
         function rewind(seconds = 5) {
             const video = document.getElementById('mainVideo');
