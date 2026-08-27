@@ -222,6 +222,22 @@
             object-fit: cover;
         }
 
+        /* 🟢 Pinned Badge Style */
+        .pinned-badge {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background-color: #ff9800;
+            color: #ffffff;
+            font-size: 11px;
+            font-weight: 700;
+            padding: 3px 8px;
+            border-radius: 6px;
+            z-index: 5;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+            letter-spacing: 0.5px;
+        }
+
         .view-badge {
             position: absolute;
             bottom: 10px;
@@ -329,6 +345,11 @@
                 <% movies.slice(0, 5).forEach(movie => { %>
                     <a href="/movie/<%= movie._id || movie.id %>" class="movie-card">
                         <div class="poster-wrapper">
+                            <!-- 🟢 PINNED BADGE -->
+                            <% if (movie.isPinned) { %>
+                                <span class="pinned-badge">📌 PINNED</span>
+                            <% } %>
+                            
                             <img 
                                 src="<%= movie.poster %>" 
                                 alt="<%= movie.title %>"
@@ -369,6 +390,11 @@
                 <% popularMovies.slice(0, 5).forEach(movie => { %>
                     <a href="/movie/<%= movie._id || movie.id %>" class="movie-card">
                         <div class="poster-wrapper">
+                            <!-- 🟢 PINNED BADGE -->
+                            <% if (movie.isPinned) { %>
+                                <span class="pinned-badge">📌 PINNED</span>
+                            <% } %>
+                            
                             <img 
                                 src="<%= movie.poster %>" 
                                 alt="<%= movie.title %>"
