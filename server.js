@@ -11,10 +11,10 @@ app.use(express.json());
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 app.use(express.static(path.join(__dirname, 'public')));
-app.use(express.static(path.join(__dirname, 'views'))); // style.css views-এ থাকলে এক্সেস পাওয়ার জন্য
+app.use(express.static(path.join(__dirname, 'views')));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Simple Native Cookie Helper (cookie-parser ছাড়াই কাজ করবে)
+// Native Cookie Helper
 app.use((req, res, next) => {
     req.cookies = {};
     const rc = req.headers.cookie;
@@ -79,10 +79,21 @@ async function getCategories() {
 async function checkAdminPassword(pass) {
     let admin = await Admin.findOne();
     if (!admin) {
-        admin = await Admin.create({ password: 'admin' }); // ডিফল্ট পাসওয়ার্ড: admin
+        admin = await Admin.create({ password: 'admin' });
     }
     return admin.password === pass;
 }
+
+// 🔑 🛠️ PASSWORD RESET ROUTE (পাসওয়ার্ড রিসিট করার জন্য)
+app.get('/reset-admin-pass', async (req, res) => {
+    try {
+        await Admin.deleteMany({});
+        await Admin.create({ password: 'admin' });
+        res.send("<h2 style='color:green; text-align:center; margin-top:50px;'>Admin password has been reset to: <b>admin</b><br><br><a href='/admin/login'>Go to Login</a></h2>");
+    } catch (err) {
+        res.send("Reset failed: " + err.message);
+    }
+});
 
 // ================= FRONTEND ROUTES ================= //
 
@@ -126,12 +137,10 @@ app.get('/movie/:id', async (req, res) => {
 
 // ================= ADMIN AUTH & ROUTES ================= //
 
-// 🟢 1. Admin Login Page (Render views/login.ejs)
 app.get('/admin/login', (req, res) => {
     res.render('login', { err: req.query.err || null });
 });
 
-// 🟢 2. Login Action Process
 app.post('/admin/login', async (req, res) => {
     try {
         const { password } = req.body;
@@ -147,13 +156,11 @@ app.post('/admin/login', async (req, res) => {
     }
 });
 
-// 🟢 3. Logout Route
 app.get('/admin/logout', (req, res) => {
     res.setHeader('Set-Cookie', 'admin_auth=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT');
     res.redirect('/admin/login');
 });
 
-// 🟢 4. Protection Middleware Check
 const isAdmin = (req, res, next) => {
     if (req.cookies && req.cookies.admin_auth === 'true') {
         next();
@@ -162,7 +169,6 @@ const isAdmin = (req, res, next) => {
     }
 };
 
-// 🟢 5. Admin Dashboard (Protected Route)
 app.get('/admin', isAdmin, async (req, res) => {
     try {
         const movies = await Movie.find().sort({ createdAt: -1 });
