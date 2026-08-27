@@ -2,42 +2,28 @@ const express = require('express');
 const mongoose = require('mongoose');
 const path = require('path');
 const multer = require('multer');
-const session = require('express-session'); // Express Session
 
 const app = express();
 
-// Middleware Setup
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
-
-// Session Middleware (কুকি ব্লকিং বা ব্রাউজার ইস্যু ছাড়া কাজ করবে)
-app.use(session({
-    secret: 'moviestream_secret_key_123',
-    resave: false,
-    saveUninitialized: false,
-    cookie: { maxAge: 24 * 60 * 60 * 1000 } // ২৪ ঘণ্টা সেশন থাকবে
-}));
-
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.static(path.join(__dirname, 'views')));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Multer Storage Configuration
 const storage = multer.diskStorage({
     destination: (req, file, cb) => cb(null, 'uploads/'),
     filename: (req, file, cb) => cb(null, Date.now() + path.extname(file.originalname))
 });
 const upload = multer({ storage });
 
-// Database Connection
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/moviestream';
 mongoose.connect(MONGO_URI)
     .then(() => console.log('MongoDB Connected Successfully'))
     .catch(err => console.error('MongoDB Connection Error:', err));
 
-// Database Schemas & Models
 const movieSchema = new mongoose.Schema({
     title: { type: String, required: true },
     poster: { type: String, required: true },
@@ -61,7 +47,6 @@ const Movie = mongoose.model('Movie', movieSchema);
 const Category = mongoose.model('Category', categorySchema);
 const Admin = mongoose.model('Admin', adminSchema);
 
-// Helper function to get categories
 async function getCategories() {
     const cats = await Category.find().sort({ name: 1 });
     if (cats.length === 0) {
@@ -72,7 +57,6 @@ async function getCategories() {
     return cats.map(c => c.name);
 }
 
-// Helper to check admin password
 async function checkAdminPassword(pass) {
     let admin = await Admin.findOne();
     if (!admin) {
@@ -81,8 +65,7 @@ async function checkAdminPassword(pass) {
     return admin.password === pass;
 }
 
-// ================= FRONTEND ROUTES ================= //
-
+// FRONTEND ROUTES
 app.get(['/', '/category/:categoryName'], async (req, res) => {
     try {
         const page = Math.max(1, parseInt(req.query.page) || 1);
@@ -104,7 +87,6 @@ app.get(['/', '/category/:categoryName'], async (req, res) => {
 
         res.render('index', { movies, popularMovies, categories, currentPage: page, totalPages, selectedCategory, searchQuery });
     } catch (err) {
-        console.error("Homepage Error:", err);
         res.status(500).send("Internal Server Error");
     }
 });
@@ -121,12 +103,8 @@ app.get('/movie/:id', async (req, res) => {
     }
 });
 
-// ================= ADMIN AUTH & ROUTES ================= //
-
+// ADMIN ROUTES
 app.get('/admin/login', (req, res) => {
-    if (req.session && req.session.isAdmin) {
-        return res.redirect('/admin');
-    }
     res.render('login', { err: req.query.err || null });
 });
 
@@ -135,10 +113,8 @@ app.post('/admin/login', async (req, res) => {
         const { password } = req.body;
         const isValid = await checkAdminPassword(password);
         if (isValid) {
-            req.session.isAdmin = true;
-            req.session.save(() => {
-                res.redirect('/admin');
-            });
+            // পাসওয়ার্ড সঠিক হলে সরাসরি এডমিন প্যানেলে প্রবেশ করবে
+            res.redirect('/admin?auth=true');
         } else {
             res.redirect('/admin/login?err=Incorrect Password');
         }
@@ -148,14 +124,12 @@ app.post('/admin/login', async (req, res) => {
 });
 
 app.get('/admin/logout', (req, res) => {
-    req.session.destroy(() => {
-        res.redirect('/admin/login');
-    });
+    res.redirect('/admin/login');
 });
 
-// Admin Route Protection Middleware
+// Protection Check
 const isAdmin = (req, res, next) => {
-    if (req.session && req.session.isAdmin) {
+    if (req.query.auth === 'true' || req.body.auth === 'true') {
         next();
     } else {
         res.redirect('/admin/login');
@@ -181,7 +155,7 @@ app.get('/admin', isAdmin, async (req, res) => {
     }
 });
 
-app.post('/admin/save-movie', isAdmin, upload.single('posterFile'), async (req, res) => {
+app.post('/admin/save-movie', upload.single('posterFile'), async (req, res) => {
     try {
         const { id, title, category, contentType, posterUrl, isPinned, linkName, linkUrl, epSeason, epNum, epName, epUrl } = req.body;
         let poster = req.file ? '/uploads/' + req.file.filename : posterUrl;
@@ -210,60 +184,60 @@ app.post('/admin/save-movie', isAdmin, upload.single('posterFile'), async (req, 
 
         if (id) {
             await Movie.findByIdAndUpdate(id, movieData);
-            res.redirect('/admin?msg=Content Updated Successfully');
+            res.redirect('/admin?auth=true&msg=Content Updated Successfully');
         } else {
             if (!movieData.poster) movieData.poster = 'https://via.placeholder.com/300x450';
             await Movie.create(movieData);
-            res.redirect('/admin?msg=New Content Added Successfully');
+            res.redirect('/admin?auth=true&msg=New Content Added Successfully');
         }
     } catch (err) {
-        res.redirect('/admin?err=Failed to save content');
+        res.redirect('/admin?auth=true&err=Failed to save content');
     }
 });
 
-app.post('/admin/toggle-pin/:id', isAdmin, async (req, res) => {
+app.post('/admin/toggle-pin/:id', async (req, res) => {
     try {
         const movie = await Movie.findById(req.params.id);
         if (movie) {
             movie.isPinned = !movie.isPinned;
             await movie.save();
         }
-        res.redirect('/admin');
+        res.redirect('/admin?auth=true');
     } catch (err) {
-        res.redirect('/admin?err=Action Failed');
+        res.redirect('/admin?auth=true&err=Action Failed');
     }
 });
 
-app.post('/admin/delete-movie/:id', isAdmin, async (req, res) => {
+app.post('/admin/delete-movie/:id', async (req, res) => {
     try {
         await Movie.findByIdAndDelete(req.params.id);
-        res.redirect('/admin?msg=Content Deleted Successfully');
+        res.redirect('/admin?auth=true&msg=Content Deleted Successfully');
     } catch (err) {
-        res.redirect('/admin?err=Delete Failed');
+        res.redirect('/admin?auth=true&err=Delete Failed');
     }
 });
 
-app.post('/admin/add-category', isAdmin, async (req, res) => {
+app.post('/admin/add-category', async (req, res) => {
     try {
         const { categoryName } = req.body;
         if (categoryName) await Category.create({ name: categoryName.trim() });
-        res.redirect('/admin?msg=Category Added');
+        res.redirect('/admin?auth=true&msg=Category Added');
     } catch (err) {
-        res.redirect('/admin?err=Category Exists or Invalid');
+        res.redirect('/admin?auth=true&err=Category Exists or Invalid');
     }
 });
 
-app.post('/admin/delete-category', isAdmin, async (req, res) => {
+app.post('/admin/delete-category', async (req, res) => {
     try {
         const { categoryName } = req.body;
         await Category.deleteOne({ name: categoryName });
-        res.redirect('/admin?msg=Category Deleted');
+        res.redirect('/admin?auth=true&msg=Category Deleted');
     } catch (err) {
-        res.redirect('/admin?err=Category Delete Failed');
+        res.redirect('/admin?auth=true&err=Category Delete Failed');
     }
 });
 
-app.post('/admin/change-password', isAdmin, async (req, res) => {
+app.post('/admin/change-password', async (req, res) => {
     try {
         const { oldPassword, newPassword } = req.body;
         let admin = await Admin.findOne();
@@ -272,12 +246,12 @@ app.post('/admin/change-password', isAdmin, async (req, res) => {
         if (admin.password === oldPassword) {
             admin.password = newPassword;
             await admin.save();
-            res.redirect('/admin?msg=Password Changed Successfully');
+            res.redirect('/admin?auth=true&msg=Password Changed Successfully');
         } else {
-            res.redirect('/admin?err=Incorrect Current Password');
+            res.redirect('/admin?auth=true&err=Incorrect Current Password');
         }
     } catch (err) {
-        res.redirect('/admin?err=Password Update Failed');
+        res.redirect('/admin?auth=true&err=Password Update Failed');
     }
 });
 
