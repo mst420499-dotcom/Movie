@@ -7,7 +7,10 @@ const mongoose = require('mongoose');
 const app = express();
 const PORT = process.env.PORT || 10000;
 
-// 🟢 MongoDB Connection (Render Environment Variable থেকে নেবে)
+// 🟢 Render Proxy Setup
+app.set('trust proxy', 1);
+
+// 🟢 MongoDB Connection
 const MONGO_URI = process.env.MONGO_URI;
 
 if (!MONGO_URI) {
@@ -39,14 +42,22 @@ const Settings = mongoose.model('Settings', settingsSchema);
 
 // 🟢 Helper Function for Default Settings
 async function getSettings() {
-    let settings = await Settings.findOne();
-    if (!settings) {
-        settings = await Settings.create({
+    try {
+        let settings = await Settings.findOne();
+        if (!settings) {
+            settings = await Settings.create({
+                adminPassword: "admin",
+                categories: ["Drama", "Action", "Hindi Movie", "Bangla Movie", "Thriller"]
+            });
+        }
+        return settings;
+    } catch (err) {
+        console.error("Settings Error:", err);
+        return {
             adminPassword: "admin",
             categories: ["Drama", "Action", "Hindi Movie", "Bangla Movie", "Thriller"]
-        });
+        };
     }
-    return settings;
 }
 
 // 🟢 Express Configurations
@@ -58,10 +69,14 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/uploads', express.static(path.join(__dirname, 'public/uploads')));
 
+// 🟢 Session Configuration
 app.use(session({
     secret: 'moviehouse_secret_key_123',
     resave: false,
-    saveUninitialized: true
+    saveUninitialized: false,
+    cookie: {
+        maxAge: 24 * 60 * 60 * 1000
+    }
 }));
 
 // 🟢 Multer Storage Setup
@@ -85,7 +100,7 @@ function isAdmin(req, res, next) {
 
 // ==================== PUBLIC ROUTES ====================
 
-// Home Page
+// 🏠 HOME PAGE (FIXED TO PREVENT 500 INTERNAL SERVER ERROR)
 app.get('/', async (req, res) => {
     try {
         const settings = await getSettings();
@@ -96,7 +111,7 @@ app.get('/', async (req, res) => {
             query.category = selectedCategory;
         }
 
-        let movies = await Movie.find(query).sort({ isPinned: -1, createdAt: -1 });
+        let movies = await Movie.find(query).sort({ isPinned: -1, createdAt: -1 }) || [];
 
         const limit = 6;
         const page = parseInt(req.query.page) || 1;
@@ -104,19 +119,29 @@ app.get('/', async (req, res) => {
         const startIndex = (page - 1) * limit;
 
         const paginatedMovies = movies.slice(startIndex, startIndex + limit);
-        const popularMovies = await Movie.find().sort({ views: -1 }).limit(5);
+        const popularMovies = await Movie.find().sort({ views: -1 }).limit(5) || [];
 
+        // EJS রেন্ডারে সব ধরণের ভ্যারিয়েবল সেফলি পাস করা হচ্ছে
         res.render('index', {
-            categories: settings.categories,
+            categories: settings.categories || [],
             selectedCategory,
             recentMovies: paginatedMovies,
             popularMovies,
             currentPage: page,
-            totalPages
+            totalPages,
+            movieToEdit: null,
+            msg: null,
+            err: null
         });
     } catch (err) {
-        console.error(err);
-        res.status(500).send('Server Error');
+        console.error("Home Route Error:", err);
+        res.status(500).send(`
+            <div style="text-align:center; padding:50px; font-family:sans-serif;">
+                <h2>Internal Server Error</h2>
+                <p>Database connection error or view variable missing.</p>
+                <p><a href="/admin/login">Go to Admin Login</a></p>
+            </div>
+        `);
     }
 });
 
@@ -132,7 +157,7 @@ app.get('/movie/:id', async (req, res) => {
         const relatedMovies = await Movie.find({ 
             _id: { $ne: movie._id }, 
             category: movie.category 
-        }).limit(5);
+        }).limit(5) || [];
 
         res.render('movie', { movie, relatedMovies });
     } catch (err) {
@@ -154,7 +179,7 @@ app.get('/search', async (req, res) => {
         }
 
         res.render('search', {
-            categories: settings.categories,
+            categories: settings.categories || [],
             searchQuery,
             movies: searchResults
         });
@@ -167,39 +192,58 @@ app.get('/search', async (req, res) => {
 
 // Admin Login GET
 app.get('/admin/login', (req, res) => {
+    if (req.session && req.session.isAdmin) {
+        return res.redirect('/admin');
+    }
     res.render('login', { error: null });
 });
 
 // Admin Login POST
 app.post('/admin/login', async (req, res) => {
-    const settings = await getSettings();
-    if (req.body.password === settings.adminPassword) {
-        req.session.isAdmin = true;
-        res.redirect('/admin');
-    } else {
-        res.render('login', { error: 'Wrong Password!' });
+    try {
+        const settings = await getSettings();
+        if (req.body.password === settings.adminPassword) {
+            req.session.isAdmin = true;
+            
+            req.session.save((err) => {
+                if (err) {
+                    console.error("Session Save Error:", err);
+                    return res.render('login', { error: 'Session Error!' });
+                }
+                res.redirect('/admin');
+            });
+        } else {
+            res.render('login', { error: 'Wrong Password!' });
+        }
+    } catch (err) {
+        res.render('login', { error: 'Login Failed!' });
     }
 });
 
 // Admin Logout
 app.get('/admin/logout', (req, res) => {
-    req.session.destroy();
-    res.redirect('/admin/login');
+    req.session.destroy(() => {
+        res.redirect('/admin/login');
+    });
 });
 
 // Admin Dashboard GET
 app.get('/admin', isAdmin, async (req, res) => {
-    const settings = await getSettings();
-    const movies = await Movie.find().sort({ createdAt: -1 });
-    const movieToEdit = req.query.edit ? await Movie.findById(req.query.edit) : null;
+    try {
+        const settings = await getSettings();
+        const movies = await Movie.find().sort({ createdAt: -1 }) || [];
+        const movieToEdit = req.query.edit ? await Movie.findById(req.query.edit) : null;
 
-    res.render('admin', {
-        categories: settings.categories,
-        movies,
-        movieToEdit,
-        msg: req.query.msg || null,
-        err: req.query.err || null
-    });
+        res.render('admin', {
+            categories: settings.categories || [],
+            movies,
+            movieToEdit,
+            msg: req.query.msg || null,
+            err: req.query.err || null
+        });
+    } catch (err) {
+        res.status(500).send("Admin Error");
+    }
 });
 
 // Change Password POST
