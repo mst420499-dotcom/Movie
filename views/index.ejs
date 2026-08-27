@@ -177,7 +177,7 @@
         .poster-wrapper {
             position: relative;
             width: 100%;
-            padding-top: 130%; /* Aspect ratio */
+            padding-top: 130%;
             background-color: #000000;
             overflow: hidden;
         }
@@ -221,6 +221,39 @@
             line-height: 1.4;
         }
 
+        /* Pagination Styles */
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+            margin: 40px 0 20px 0;
+        }
+        .page-btn {
+            padding: 10px 22px;
+            background-color: #00bfa5;
+            color: #ffffff;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 700;
+            font-size: 14px;
+            display: inline-flex;
+            align-items: center;
+            transition: background 0.2s;
+        }
+        .page-btn:hover:not(.disabled) {
+            background-color: #009688;
+        }
+        .page-btn.disabled {
+            background-color: #171d2a;
+            color: #435269;
+            pointer-events: none;
+        }
+        .page-info {
+            font-size: 14px;
+            color: #8b9bb4;
+        }
+
         /* Site Footer */
         .site-footer {
             background-color: #090d14;
@@ -229,33 +262,6 @@
             font-size: 13px;
             color: #6b7a90;
             border-top: 1px solid #141a26;
-        }
-
-        /* Pagination Controls */
-        .pagination {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 12px;
-            margin: 30px 0;
-        }
-        .page-btn {
-            padding: 8px 18px;
-            background-color: #00bfa5;
-            color: #fff;
-            text-decoration: none;
-            border-radius: 6px;
-            font-weight: bold;
-            font-size: 14px;
-        }
-        .page-btn.disabled {
-            background-color: #171d2a;
-            color: #555;
-            pointer-events: none;
-        }
-        .page-info {
-            font-size: 14px;
-            color: #8b9bb4;
         }
     </style>
 </head>
@@ -336,17 +342,19 @@
             </div>
         <% } %>
 
-        <!-- Pagination Controls -->
+        <!-- Pagination Controls with Dynamic Category & Search Preserved -->
         <% if (typeof totalPages !== 'undefined' && totalPages > 1) { %>
+            <% 
+                let queryCategory = (typeof selectedCategory !== 'undefined' && selectedCategory && selectedCategory !== 'All') ? '&category=' + encodeURIComponent(selectedCategory) : '';
+                let querySearch = (typeof searchQuery !== 'undefined' && searchQuery) ? '&search=' + encodeURIComponent(searchQuery) : '';
+                let extraParams = queryCategory + querySearch;
+            %>
             <div class="pagination">
-                <% const catParam = (selectedCategory && selectedCategory !== 'All') ? '&category=' + encodeURIComponent(selectedCategory) : ''; %>
-                <% const searchParam = (typeof searchQuery !== 'undefined' && searchQuery) ? '&search=' + encodeURIComponent(searchQuery) : ''; %>
-                
-                <a href="/?page=<%= currentPage - 1 %><%= catParam %><%= searchParam %>" class="page-btn <%= currentPage <= 1 ? 'disabled' : '' %>">← Previous</a>
+                <a href="/?page=<%= currentPage - 1 %><%= extraParams %>" class="page-btn <%= currentPage <= 1 ? 'disabled' : '' %>">← Previous</a>
                 
                 <span class="page-info">Page <%= currentPage %> of <%= totalPages %></span>
                 
-                <a href="/?page=<%= currentPage + 1 %><%= catParam %><%= searchParam %>" class="page-btn <%= currentPage >= totalPages ? 'disabled' : '' %>">Next →</a>
+                <a href="/?page=<%= currentPage + 1 %><%= extraParams %>" class="page-btn <%= currentPage >= totalPages ? 'disabled' : '' %>">Next →</a>
             </div>
         <% } %>
     </main>
