@@ -64,17 +64,11 @@
             color: #00bfa5;
         }
 
-        .header-actions {
+        /* Theme Toggle Button */
+        .theme-btn {
             position: absolute;
             right: 40px;
             top: 20px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        /* Theme Toggle Button */
-        .theme-btn {
             background-color: var(--card-bg);
             border: 1px solid var(--border-color);
             color: var(--text-color);
@@ -86,18 +80,6 @@
             justify-content: center;
             cursor: pointer;
             font-size: 16px;
-        }
-
-        .user-badge {
-            width: 35px;
-            height: 35px;
-            background-color: #d97706;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            box-shadow: 0 0 10px rgba(217, 119, 6, 0.4);
         }
 
         .main-content {
@@ -204,7 +186,7 @@
         }
         @media (max-width: 768px) {
             .movie-grid { grid-template-columns: repeat(2, 1fr); }
-            .header-actions { right: 20px; }
+            .theme-btn { right: 20px; }
         }
 
         /* Movie Card */
@@ -317,17 +299,8 @@
     <!-- Header -->
     <header class="top-header">
         <a href="/" class="logo">MOVIE<span>HOUSE</span></a>
-        
-        <div class="header-actions">
-            <!-- Dark / Light Theme Toggle Button -->
-            <button class="theme-btn" id="themeToggle" title="Toggle Mode">🌙</button>
-            
-            <div class="user-badge">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="white">
-                    <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/>
-                </svg>
-            </div>
-        </div>
+        <!-- Dark / Light Theme Toggle Button -->
+        <button class="theme-btn" id="themeToggle" title="Toggle Mode">🌙</button>
     </header>
 
     <main class="main-content">
@@ -424,7 +397,6 @@
     <script>
         const themeBtn = document.getElementById('themeToggle');
         
-        // LocalStorage থেকে সেভ হওয়া থিম রিড করা
         const currentTheme = localStorage.getItem('theme');
         if (currentTheme) {
             document.documentElement.setAttribute('data-theme', currentTheme);
@@ -433,7 +405,6 @@
             }
         }
 
-        // বাটন ক্লিকে নাইট/ডে মোড পরিবর্তন করা
         themeBtn.addEventListener('click', () => {
             let theme = document.documentElement.getAttribute('data-theme');
             if (theme === 'light') {
