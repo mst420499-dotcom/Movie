@@ -5,15 +5,40 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MOVIEHOUSE - Stream Movies</title>
     <style>
+        /* Theme Variables */
+        :root {
+            --bg-color: #0d111a;
+            --card-bg: #171d2a;
+            --text-color: #ffffff;
+            --text-sub: #8b9bb4;
+            --footer-bg: #090d14;
+            --border-color: #141a26;
+            --placeholder-color: #55657e;
+            --cat-hover: #1f2738;
+        }
+
+        /* Light Mode Custom Colors */
+        [data-theme="light"] {
+            --bg-color: #f4f6f9;
+            --card-bg: #ffffff;
+            --text-color: #0d111a;
+            --text-sub: #55657e;
+            --footer-bg: #e2e8f0;
+            --border-color: #cbd5e1;
+            --placeholder-color: #94a3b8;
+            --cat-hover: #e2e8f0;
+        }
+
         * {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
+            transition: background-color 0.3s, color 0.3s;
         }
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: #0d111a;
-            color: #ffffff;
+            background-color: var(--bg-color);
+            color: var(--text-color);
             min-height: 100vh;
             display: flex;
             flex-direction: column;
@@ -32,16 +57,38 @@
             font-size: 24px;
             font-weight: 800;
             letter-spacing: 1px;
-            color: #ffffff;
+            color: var(--text-color);
             text-decoration: none;
         }
         .logo span {
             color: #00bfa5;
         }
-        .user-badge {
+
+        .header-actions {
             position: absolute;
             right: 40px;
             top: 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        /* Theme Toggle Button */
+        .theme-btn {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        .user-badge {
             width: 35px;
             height: 35px;
             background-color: #d97706;
@@ -71,21 +118,22 @@
             display: flex;
             width: 100%;
             max-width: 480px;
-            background-color: #171d2a;
+            background-color: var(--card-bg);
             border-radius: 30px;
             padding: 4px;
+            border: 1px solid var(--border-color);
         }
         .search-form input {
             flex: 1;
             background: transparent;
             border: none;
             padding: 10px 20px;
-            color: #8b9bb4;
+            color: var(--text-color);
             outline: none;
             font-size: 14px;
         }
         .search-form input::placeholder {
-            color: #55657e;
+            color: var(--placeholder-color);
         }
         .search-form button {
             background-color: #00bfa5;
@@ -112,23 +160,24 @@
             margin-bottom: 40px;
         }
         .cat-pill {
-            background-color: #171d2a;
-            color: #9aa8bc;
+            background-color: var(--card-bg);
+            color: var(--text-sub);
             text-decoration: none;
             padding: 8px 18px;
             border-radius: 20px;
             font-size: 13px;
             font-weight: 500;
-            transition: all 0.2s;
+            border: 1px solid var(--border-color);
         }
         .cat-pill:hover {
-            color: #ffffff;
-            background-color: #1f2738;
+            color: var(--text-color);
+            background-color: var(--cat-hover);
         }
         .cat-pill.active {
             background-color: #00bfa5;
             color: #ffffff;
             font-weight: 600;
+            border-color: #00bfa5;
         }
 
         /* Section Title */
@@ -137,7 +186,7 @@
             font-size: 14px;
             font-weight: 700;
             letter-spacing: 1px;
-            color: #ffffff;
+            color: var(--text-color);
             margin: 30px 0 20px 0;
             text-transform: uppercase;
         }
@@ -155,23 +204,24 @@
         }
         @media (max-width: 768px) {
             .movie-grid { grid-template-columns: repeat(2, 1fr); }
-            .user-badge { right: 20px; }
+            .header-actions { right: 20px; }
         }
 
         /* Movie Card */
         .movie-card {
-            background-color: #171d2a;
+            background-color: var(--card-bg);
             border-radius: 12px;
             overflow: hidden;
             text-decoration: none;
-            color: #ffffff;
+            color: var(--text-color);
             display: flex;
             flex-direction: column;
+            border: 1px solid var(--border-color);
             transition: transform 0.2s, box-shadow 0.2s;
         }
         .movie-card:hover {
             transform: translateY(-4px);
-            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
         }
 
         .poster-wrapper {
@@ -208,13 +258,13 @@
         .card-footer {
             padding: 14px 10px;
             text-align: center;
-            background-color: #171d2a;
+            background-color: var(--card-bg);
             margin-top: auto;
         }
         .card-title {
             font-size: 13px;
             font-weight: 600;
-            color: #ffffff;
+            color: var(--text-color);
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -239,29 +289,26 @@
             font-size: 14px;
             display: inline-flex;
             align-items: center;
-            transition: background 0.2s;
-        }
-        .page-btn:hover:not(.disabled) {
-            background-color: #009688;
         }
         .page-btn.disabled {
-            background-color: #171d2a;
-            color: #435269;
+            background-color: var(--card-bg);
+            color: var(--text-sub);
             pointer-events: none;
+            border: 1px solid var(--border-color);
         }
         .page-info {
             font-size: 14px;
-            color: #8b9bb4;
+            color: var(--text-sub);
         }
 
         /* Site Footer */
         .site-footer {
-            background-color: #090d14;
+            background-color: var(--footer-bg);
             text-align: center;
             padding: 20px;
             font-size: 13px;
-            color: #6b7a90;
-            border-top: 1px solid #141a26;
+            color: var(--text-sub);
+            border-top: 1px solid var(--border-color);
         }
     </style>
 </head>
@@ -270,10 +317,16 @@
     <!-- Header -->
     <header class="top-header">
         <a href="/" class="logo">MOVIE<span>HOUSE</span></a>
-        <div class="user-badge">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="white">
-                <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/>
-            </svg>
+        
+        <div class="header-actions">
+            <!-- Dark / Light Theme Toggle Button -->
+            <button class="theme-btn" id="themeToggle" title="Toggle Mode">🌙</button>
+            
+            <div class="user-badge">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="white">
+                    <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/>
+                </svg>
+            </div>
         </div>
     </header>
 
@@ -316,7 +369,7 @@
                     </a>
                 <% }) %>
             <% } else { %>
-                <p style="grid-column: 1/-1; text-align: center; color: #8b9bb4; padding: 30px 0;">No movies found.</p>
+                <p style="grid-column: 1/-1; text-align: center; color: var(--text-sub); padding: 30px 0;">No movies found.</p>
             <% } %>
         </div>
 
@@ -356,7 +409,7 @@
                     </a>
                 <% }) %>
             <% } else { %>
-                <p style="grid-column: 1/-1; text-align: center; color: #8b9bb4; padding: 20px 0;">No popular movies found.</p>
+                <p style="grid-column: 1/-1; text-align: center; color: var(--text-sub); padding: 20px 0;">No popular movies found.</p>
             <% } %>
         </div>
 
@@ -367,5 +420,32 @@
         © Movie House - All Rights Reserved
     </footer>
 
+    <!-- Theme Switch Script -->
+    <script>
+        const themeBtn = document.getElementById('themeToggle');
+        
+        // LocalStorage থেকে সেভ হওয়া থিম রিড করা
+        const currentTheme = localStorage.getItem('theme');
+        if (currentTheme) {
+            document.documentElement.setAttribute('data-theme', currentTheme);
+            if (currentTheme === 'light') {
+                themeBtn.textContent = '☀️';
+            }
+        }
+
+        // বাটন ক্লিকে নাইট/ডে মোড পরিবর্তন করা
+        themeBtn.addEventListener('click', () => {
+            let theme = document.documentElement.getAttribute('data-theme');
+            if (theme === 'light') {
+                document.documentElement.setAttribute('data-theme', 'dark');
+                localStorage.setItem('theme', 'dark');
+                themeBtn.textContent = '🌙';
+            } else {
+                document.documentElement.setAttribute('data-theme', 'light');
+                localStorage.setItem('theme', 'light');
+                themeBtn.textContent = '☀️';
+            }
+        });
+    </script>
 </body>
 </html>
