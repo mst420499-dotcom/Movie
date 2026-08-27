@@ -238,22 +238,6 @@
             letter-spacing: 0.5px;
         }
 
-        /* 🟢 NEW Badge Style (Right Side Top) */
-        .new-badge {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            background-color: #e50914;
-            color: #ffffff;
-            font-size: 11px;
-            font-weight: 700;
-            padding: 3px 8px;
-            border-radius: 6px;
-            z-index: 5;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.4);
-            letter-spacing: 0.5px;
-        }
-
         .view-badge {
             position: absolute;
             bottom: 10px;
@@ -269,11 +253,14 @@
             backdrop-filter: blur(2px);
         }
 
+        /* Card Footer */
         .card-footer {
-            padding: 14px 10px;
-            text-align: center;
+            padding: 12px 10px;
             background-color: var(--card-bg);
             margin-top: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
         }
         .card-title {
             font-size: 13px;
@@ -283,6 +270,24 @@
             overflow: hidden;
             text-overflow: ellipsis;
             line-height: 1.4;
+            text-align: center;
+        }
+
+        /* Bottom Details Row */
+        .card-info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 11px;
+            color: var(--text-sub);
+        }
+        .type-badge {
+            background-color: rgba(0, 191, 165, 0.15);
+            color: #00bfa5;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 700;
+            text-transform: uppercase;
         }
 
         /* Pagination Styles */
@@ -358,17 +363,12 @@
         <h2 class="section-title">RECENTLY UPDATED</h2>
         <div class="movie-grid">
             <% if (typeof movies !== 'undefined' && movies.length > 0) { %>
-                <% movies.slice(0, 5).forEach((movie, index) => { %>
+                <% movies.slice(0, 5).forEach(movie => { %>
                     <a href="/movie/<%= movie._id || movie.id %>" class="movie-card">
                         <div class="poster-wrapper">
-                            <!-- PINNED BADGE (Left) -->
+                            <!-- PINNED BADGE (NEW badge removed) -->
                             <% if (movie.isPinned) { %>
                                 <span class="pinned-badge">📌 PINNED</span>
-                            <% } %>
-
-                            <!-- 🟢 NEW BADGE (Right side top for first 3 items) -->
-                            <% if (index < 3) { %>
-                                <span class="new-badge">NEW</span>
                             <% } %>
                             
                             <img 
@@ -380,6 +380,12 @@
                         </div>
                         <div class="card-footer">
                             <div class="card-title" title="<%= movie.title %>"><%= movie.title %></div>
+                            <div class="card-info-row">
+                                <!-- Type Badge: Bottom Left -->
+                                <span class="type-badge">
+                                    <%= (movie.type && movie.type.toLowerCase().includes('web')) ? 'WEB SERIES' : 'MOVIE' %>
+                                </span>
+                            </div>
                         </div>
                     </a>
                 <% }) %>
@@ -411,7 +417,7 @@
                 <% popularMovies.slice(0, 5).forEach(movie => { %>
                     <a href="/movie/<%= movie._id || movie.id %>" class="movie-card">
                         <div class="poster-wrapper">
-                            <!-- PINNED BADGE -->
+                            <!-- PINNED BADGE (NEW badge removed) -->
                             <% if (movie.isPinned) { %>
                                 <span class="pinned-badge">📌 PINNED</span>
                             <% } %>
@@ -425,6 +431,12 @@
                         </div>
                         <div class="card-footer">
                             <div class="card-title" title="<%= movie.title %>"><%= movie.title %></div>
+                            <div class="card-info-row">
+                                <!-- Type Badge: Bottom Left -->
+                                <span class="type-badge">
+                                    <%= (movie.type && movie.type.toLowerCase().includes('web')) ? 'WEB SERIES' : 'MOVIE' %>
+                                </span>
+                            </div>
                         </div>
                     </a>
                 <% }) %>
