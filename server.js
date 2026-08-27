@@ -1,5 +1,5 @@
 const express = require('express');
-const path = require('path');
+const path = path = require('path');
 const multer = require('multer');
 const session = require('express-session');
 const mongoose = require('mongoose');
@@ -157,7 +157,7 @@ app.get('/', async (req, res) => {
     }
 });
 
-// 🟢 FIX: Category Route (/category/Bangla%20 এরর দূর করতে)
+// 🟢 Category Route
 app.get('/category/:name', async (req, res) => {
     try {
         const categoryName = decodeURIComponent(req.params.name).trim();
@@ -277,83 +277,131 @@ app.get('/admin', isAdmin, async (req, res) => {
     }
 });
 
-// Save Movie (Clean Embed Links Applied)
+// 🟢 FIX: Save Movie (isPinned, Form Array Fields, Embed Links Fix)
 app.post('/admin/save-movie', isAdmin, upload.single('posterFile'), async (req, res) => {
-    const { id, title, category, contentType, posterUrl, linkName, linkUrl, epSeason, epNumber, epTitle, epUrl, isPinned } = req.body;
+    try {
+        const { id, title, category, contentType, posterUrl, linkName, linkUrl, epSeason, epNum, epNumber, epName, epTitle, epUrl, isPinned } = req.body;
 
-    let poster = posterUrl || '';
-    if (req.file) poster = '/uploads/' + req.file.filename;
+        let poster = posterUrl || '';
+        if (req.file) poster = '/uploads/' + req.file.filename;
 
-    const videoLinks = [];
-    if (Array.isArray(linkUrl)) {
-        linkUrl.forEach((url, i) => {
-            if (url) videoLinks.push({ name: (linkName && linkName[i]) ? linkName[i] : `Server ${i + 1}`, url: cleanEmbedUrl(url) });
-        });
-    } else if (linkUrl) {
-        videoLinks.push({ name: linkName || 'Server 1', url: cleanEmbedUrl(linkUrl) });
+        // Boolean Check for Checkbox
+        const pinnedStatus = isPinned === 'on' || isPinned === 'true' || isPinned === true;
+
+        // Video Links Array Processing
+        const videoLinks = [];
+        if (Array.isArray(linkUrl)) {
+            linkUrl.forEach((url, i) => {
+                if (url && url.trim()) {
+                    videoLinks.push({
+                        name: (linkName && linkName[i]) ? linkName[i] : `Server ${i + 1}`,
+                        url: cleanEmbedUrl(url)
+                    });
+                }
+            });
+        } else if (linkUrl && linkUrl.trim()) {
+            videoLinks.push({
+                name: linkName || 'Server 1',
+                url: cleanEmbedUrl(linkUrl)
+            });
+        }
+
+        // Episodes Array Processing (Form এর সম্ভাব্য নামসমূহ সাপোর্ট দেওয়া হয়েছে)
+        const episodes = [];
+        const seasonsInput = epSeason;
+        const numbersInput = epNumber || epNum;
+        const titlesInput = epTitle || epName;
+
+        if (Array.isArray(epUrl)) {
+            epUrl.forEach((url, i) => {
+                if (url && url.trim()) {
+                    episodes.push({
+                        season: (seasonsInput && seasonsInput[i]) ? parseInt(seasonsInput[i]) : 1,
+                        episodeNumber: (numbersInput && numbersInput[i]) ? parseInt(numbersInput[i]) : (i + 1),
+                        title: (titlesInput && titlesInput[i]) ? titlesInput[i] : `Episode ${i + 1}`,
+                        url: cleanEmbedUrl(url)
+                    });
+                }
+            });
+        } else if (epUrl && epUrl.trim()) {
+            episodes.push({
+                season: seasonsInput ? parseInt(seasonsInput) : 1,
+                episodeNumber: numbersInput ? parseInt(numbersInput) : 1,
+                title: titlesInput || 'Episode 1',
+                url: cleanEmbedUrl(epUrl)
+            });
+        }
+
+        const movieData = {
+            title,
+            category,
+            contentType: contentType || 'movie',
+            videoLinks,
+            episodes,
+            isPinned: pinnedStatus
+        };
+
+        if (poster) movieData.poster = poster;
+
+        if (id) {
+            await Movie.findByIdAndUpdate(id, movieData);
+        } else {
+            if (!movieData.poster) movieData.poster = 'https://via.placeholder.com/300x400?text=No+Poster';
+            await Movie.create(movieData);
+        }
+
+        res.redirect('/admin?msg=Saved+successfully!');
+    } catch (err) {
+        console.error("Save Error:", err);
+        res.redirect('/admin?err=Save+failed!');
     }
+});
 
-    const episodes = [];
-    if (Array.isArray(epUrl)) {
-        epUrl.forEach((url, i) => {
-            if (url) {
-                episodes.push({
-                    season: (epSeason && epSeason[i]) ? parseInt(epSeason[i]) : 1,
-                    episodeNumber: (epNumber && epNumber[i]) ? parseInt(epNumber[i]) : (i + 1),
-                    title: (epTitle && epTitle[i]) ? epTitle[i] : `Episode ${i + 1}`,
-                    url: cleanEmbedUrl(url)
-                });
-            }
-        });
-    } else if (epUrl) {
-        episodes.push({
-            season: epSeason ? parseInt(epSeason) : 1,
-            episodeNumber: epNumber ? parseInt(epNumber) : 1,
-            title: epTitle || 'Episode 1',
-            url: cleanEmbedUrl(epUrl)
-        });
+// 🟢 ADDED: Toggle Pin Route (অ্যাডমিন প্যানেল থেকে সরাসরি Pin/Unpin করার জন্য)
+app.post('/admin/toggle-pin/:id', isAdmin, async (req, res) => {
+    try {
+        const movie = await Movie.findById(req.params.id);
+        if (movie) {
+            movie.isPinned = !movie.isPinned;
+            await movie.save();
+        }
+        res.redirect('/admin');
+    } catch (err) {
+        res.redirect('/admin?err=Toggle+pin+failed!');
     }
-
-    const movieData = {
-        title,
-        category,
-        contentType: contentType || 'movie',
-        videoLinks,
-        episodes,
-        isPinned: isPinned === 'on'
-    };
-
-    if (poster) movieData.poster = poster;
-
-    if (id) {
-        await Movie.findByIdAndUpdate(id, movieData);
-    } else {
-        if (!poster) movieData.poster = 'https://via.placeholder.com/300x400?text=No+Poster';
-        await Movie.create(movieData);
-    }
-
-    res.redirect('/admin?msg=Saved+successfully!');
 });
 
 app.post('/admin/delete-movie/:id', isAdmin, async (req, res) => {
-    await Movie.findByIdAndDelete(req.params.id);
-    res.redirect('/admin');
+    try {
+        await Movie.findByIdAndDelete(req.params.id);
+        res.redirect('/admin');
+    } catch (err) {
+        res.redirect('/admin?err=Delete+failed!');
+    }
 });
 
 app.post('/admin/add-category', isAdmin, async (req, res) => {
-    const settings = await getSettings();
-    if (req.body.categoryName && !settings.categories.includes(req.body.categoryName.trim())) {
-        settings.categories.push(req.body.categoryName.trim());
-        await settings.save();
+    try {
+        const settings = await getSettings();
+        if (req.body.categoryName && !settings.categories.includes(req.body.categoryName.trim())) {
+            settings.categories.push(req.body.categoryName.trim());
+            await settings.save();
+        }
+        res.redirect('/admin');
+    } catch (err) {
+        res.redirect('/admin?err=Category+add+failed!');
     }
-    res.redirect('/admin');
 });
 
 app.post('/admin/delete-category', isAdmin, async (req, res) => {
-    const settings = await getSettings();
-    settings.categories = settings.categories.filter(c => c !== req.body.categoryName);
-    await settings.save();
-    res.redirect('/admin');
+    try {
+        const settings = await getSettings();
+        settings.categories = settings.categories.filter(c => c !== req.body.categoryName);
+        await settings.save();
+        res.redirect('/admin');
+    } catch (err) {
+        res.redirect('/admin?err=Category+delete+failed!');
+    }
 });
 
 app.listen(PORT, () => {
