@@ -2,20 +2,32 @@ const express = require('express');
 const mongoose = require('mongoose');
 const path = require('path');
 const multer = require('multer');
-const cookieParser = require('cookie-parser'); // কুঁকি হ্যান্ডেল করার জন্য
 
 const app = express();
 
 // Middleware Setup
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
-app.use(cookieParser());
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'views'))); // style.css views-এ থাকলে এক্সেস পাওয়ার জন্য
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Multer Storage
+// Simple Native Cookie Helper (cookie-parser ছাড়াই কাজ করবে)
+app.use((req, res, next) => {
+    req.cookies = {};
+    const rc = req.headers.cookie;
+    if (rc) {
+        rc.split(';').forEach(cookie => {
+            const parts = cookie.split('=');
+            req.cookies[parts.shift().trim()] = decodeURI(parts.join('='));
+        });
+    }
+    next();
+});
+
+// Multer Storage Configuration
 const storage = multer.diskStorage({
     destination: (req, file, cb) => cb(null, 'uploads/'),
     filename: (req, file, cb) => cb(null, Date.now() + path.extname(file.originalname))
@@ -28,7 +40,7 @@ mongoose.connect(MONGO_URI)
     .then(() => console.log('MongoDB Connected Successfully'))
     .catch(err => console.error('MongoDB Connection Error:', err));
 
-// Schemas & Models
+// Database Schemas & Models
 const movieSchema = new mongoose.Schema({
     title: { type: String, required: true },
     poster: { type: String, required: true },
@@ -52,7 +64,7 @@ const Movie = mongoose.model('Movie', movieSchema);
 const Category = mongoose.model('Category', categorySchema);
 const Admin = mongoose.model('Admin', adminSchema);
 
-// Helper function for Categories
+// Helper function to get categories
 async function getCategories() {
     const cats = await Category.find().sort({ name: 1 });
     if (cats.length === 0) {
@@ -63,11 +75,11 @@ async function getCategories() {
     return cats.map(c => c.name);
 }
 
-// Helper to check default admin password
+// Helper to check admin password
 async function checkAdminPassword(pass) {
     let admin = await Admin.findOne();
     if (!admin) {
-        admin = await Admin.create({ password: 'admin' }); // ডিফল্ট পাসওয়ার্ড 'admin'
+        admin = await Admin.create({ password: 'admin' }); // ডিফল্ট পাসওয়ার্ড: admin
     }
     return admin.password === pass;
 }
@@ -114,18 +126,18 @@ app.get('/movie/:id', async (req, res) => {
 
 // ================= ADMIN AUTH & ROUTES ================= //
 
-// Admin Login Page Route
+// 🟢 1. Admin Login Page (Render views/login.ejs)
 app.get('/admin/login', (req, res) => {
-    res.render('admin-login', { err: req.query.err || null });
+    res.render('login', { err: req.query.err || null });
 });
 
-// Admin Login POST Route
+// 🟢 2. Login Action Process
 app.post('/admin/login', async (req, res) => {
     try {
         const { password } = req.body;
         const isValid = await checkAdminPassword(password);
         if (isValid) {
-            res.cookie('admin_auth', 'true', { httpOnly: true });
+            res.setHeader('Set-Cookie', 'admin_auth=true; Path=/; HttpOnly');
             res.redirect('/admin');
         } else {
             res.redirect('/admin/login?err=Incorrect Password');
@@ -135,13 +147,13 @@ app.post('/admin/login', async (req, res) => {
     }
 });
 
-// Admin Logout
+// 🟢 3. Logout Route
 app.get('/admin/logout', (req, res) => {
-    res.clearCookie('admin_auth');
+    res.setHeader('Set-Cookie', 'admin_auth=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT');
     res.redirect('/admin/login');
 });
 
-// Admin Protection Middleware
+// 🟢 4. Protection Middleware Check
 const isAdmin = (req, res, next) => {
     if (req.cookies && req.cookies.admin_auth === 'true') {
         next();
@@ -150,7 +162,7 @@ const isAdmin = (req, res, next) => {
     }
 };
 
-// Admin Dashboard (Protected)
+// 🟢 5. Admin Dashboard (Protected Route)
 app.get('/admin', isAdmin, async (req, res) => {
     try {
         const movies = await Movie.find().sort({ createdAt: -1 });
