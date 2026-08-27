@@ -7,10 +7,10 @@ const mongoose = require('mongoose');
 const app = express();
 const PORT = process.env.PORT || 10000;
 
-// 🟢 Render Proxy Setup
+// 🟢 Render Proxy Setup (সেশন কুকি ঠিকমতো পাস হওয়ার জন্য)
 app.set('trust proxy', 1);
 
-// 🟢 MongoDB Connection
+// 🟢 MongoDB Connection (Render Environment Variable থেকে নেবে)
 const MONGO_URI = process.env.MONGO_URI;
 
 if (!MONGO_URI) {
@@ -52,7 +52,7 @@ async function getSettings() {
         }
         return settings;
     } catch (err) {
-        console.error("Settings Error:", err);
+        console.error("Settings Fetch Error:", err);
         return {
             adminPassword: "admin",
             categories: ["Drama", "Action", "Hindi Movie", "Bangla Movie", "Thriller"]
@@ -100,7 +100,7 @@ function isAdmin(req, res, next) {
 
 // ==================== PUBLIC ROUTES ====================
 
-// 🏠 HOME PAGE (FIXED FOR index.ejs VARIABLES)
+// Home Page (FIXED: searchQuery ও activeCat মিসিং এরর সমাধান করা হয়েছে)
 app.get('/', async (req, res) => {
     try {
         const settings = await getSettings();
@@ -125,19 +125,15 @@ app.get('/', async (req, res) => {
         const paginatedMovies = movies.slice(startIndex, startIndex + limit);
         const popularMovies = await Movie.find().sort({ views: -1 }).limit(5) || [];
 
-        // EJS-এ যে যে ভ্যারিয়েবল চাওয়া হয়েছে (activeCat, searchQuery সহ) তা পাস করা হলো
         res.render('index', {
             categories: settings.categories || [],
             selectedCategory,
-            activeCat: selectedCategory, // index.ejs 323 লাইনের জন্য
-            searchQuery: searchQuery || '', // index.ejs 323 লাইনের জন্য
+            activeCat: selectedCategory, // index.ejs 323 লাইনের জন্য যুক্ত করা হয়েছে
+            searchQuery: searchQuery || '', // index.ejs 323 লাইনের জন্য যুক্ত করা হয়েছে
             recentMovies: paginatedMovies,
             popularMovies,
             currentPage: page,
-            totalPages,
-            movieToEdit: null,
-            msg: null,
-            err: null
+            totalPages
         });
     } catch (err) {
         console.error("Home Route Error:", err);
@@ -199,7 +195,7 @@ app.get('/admin/login', (req, res) => {
     res.render('login', { error: null });
 });
 
-// Admin Login POST
+// Admin Login POST (FIXED: সেশন নিশ্চিতভাবে সেভ করার পর রিডাইরেক্ট)
 app.post('/admin/login', async (req, res) => {
     try {
         const settings = await getSettings();
