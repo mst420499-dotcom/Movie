@@ -142,7 +142,7 @@
             text-transform: uppercase;
         }
 
-        /* Movie Grid - Exactly 5 Columns */
+        /* Movie Grid */
         .movie-grid {
             display: grid;
             grid-template-columns: repeat(5, 1fr);
@@ -227,7 +227,7 @@
             justify-content: center;
             align-items: center;
             gap: 15px;
-            margin: 30px 0 50px 0;
+            margin: 30px 0;
         }
         .page-btn {
             padding: 8px 20px;
@@ -296,11 +296,11 @@
             <% } %>
         </div>
 
-        <!-- Recently Updated Section (Pagination controls this grid) -->
+        <!-- Recently Updated Section -->
         <h2 class="section-title">RECENTLY UPDATED</h2>
         <div class="movie-grid">
             <% if (typeof movies !== 'undefined' && movies.length > 0) { %>
-                <% movies.forEach(movie => { %>
+                <% movies.slice(0, 5).forEach(movie => { %>
                     <a href="/movie/<%= movie._id || movie.id %>" class="movie-card">
                         <div class="poster-wrapper">
                             <img 
@@ -316,11 +316,11 @@
                     </a>
                 <% }) %>
             <% } else { %>
-                <p style="grid-column: 1/-1; text-align: center; color: #8b9bb4; padding: 20px 0;">No movies found.</p>
+                <p style="grid-column: 1/-1; text-align: center; color: #8b9bb4; padding: 30px 0;">No movies found.</p>
             <% } %>
         </div>
 
-        <!-- Pagination Controls (Placed directly after Recently Updated / Category results) -->
+        <!-- Pagination Controls -->
         <% if (typeof totalPages !== 'undefined' && totalPages > 1) { %>
             <% 
                 let queryCategory = (typeof selectedCategory !== 'undefined' && selectedCategory && selectedCategory !== 'All') ? '&category=' + encodeURIComponent(selectedCategory) : '';
@@ -333,28 +333,6 @@
                 <span class="page-info">Page <%= currentPage %> of <%= totalPages %></span>
                 
                 <a href="/?page=<%= currentPage + 1 %><%= extraParams %>" class="page-btn <%= currentPage >= totalPages ? 'disabled' : '' %>">Next →</a>
-            </div>
-        <% } %>
-
-        <!-- Popular Movies Section (Placed BELOW pagination) -->
-        <% if (typeof popularMovies !== 'undefined' && popularMovies.length > 0) { %>
-            <h2 class="section-title">POPULAR MOVIES</h2>
-            <div class="movie-grid">
-                <% popularMovies.forEach(movie => { %>
-                    <a href="/movie/<%= movie._id || movie.id %>" class="movie-card">
-                        <div class="poster-wrapper">
-                            <img 
-                                src="<%= movie.poster %>" 
-                                alt="<%= movie.title %>"
-                                onerror="this.onerror=null; this.src='https://via.placeholder.com/300x400/000000/FFFFFF?text=No+Image';"
-                            >
-                            <span class="view-badge">👁 <%= movie.views || 0 %></span>
-                        </div>
-                        <div class="card-footer">
-                            <div class="card-title" title="<%= movie.title %>"><%= movie.title %></div>
-                        </div>
-                    </a>
-                <% }) %>
             </div>
         <% } %>
     </main>
