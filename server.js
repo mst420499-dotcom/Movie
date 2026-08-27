@@ -2,30 +2,27 @@ const express = require('express');
 const mongoose = require('mongoose');
 const path = require('path');
 const multer = require('multer');
+const session = require('express-session'); // Express Session
 
 const app = express();
 
 // Middleware Setup
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
+
+// Session Middleware (কুকি ব্লকিং বা ব্রাউজার ইস্যু ছাড়া কাজ করবে)
+app.use(session({
+    secret: 'moviestream_secret_key_123',
+    resave: false,
+    saveUninitialized: false,
+    cookie: { maxAge: 24 * 60 * 60 * 1000 } // ২৪ ঘণ্টা সেশন থাকবে
+}));
+
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.static(path.join(__dirname, 'views')));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-
-// Native Cookie Helper
-app.use((req, res, next) => {
-    req.cookies = {};
-    const rc = req.headers.cookie;
-    if (rc) {
-        rc.split(';').forEach(cookie => {
-            const parts = cookie.split('=');
-            req.cookies[parts.shift().trim()] = decodeURI(parts.join('='));
-        });
-    }
-    next();
-});
 
 // Multer Storage Configuration
 const storage = multer.diskStorage({
@@ -84,17 +81,6 @@ async function checkAdminPassword(pass) {
     return admin.password === pass;
 }
 
-// 🔑 🛠️ PASSWORD RESET ROUTE (পাসওয়ার্ড রিসিট করার জন্য)
-app.get('/reset-admin-pass', async (req, res) => {
-    try {
-        await Admin.deleteMany({});
-        await Admin.create({ password: 'admin' });
-        res.send("<h2 style='color:green; text-align:center; margin-top:50px;'>Admin password has been reset to: <b>admin</b><br><br><a href='/admin/login'>Go to Login</a></h2>");
-    } catch (err) {
-        res.send("Reset failed: " + err.message);
-    }
-});
-
 // ================= FRONTEND ROUTES ================= //
 
 app.get(['/', '/category/:categoryName'], async (req, res) => {
@@ -138,6 +124,9 @@ app.get('/movie/:id', async (req, res) => {
 // ================= ADMIN AUTH & ROUTES ================= //
 
 app.get('/admin/login', (req, res) => {
+    if (req.session && req.session.isAdmin) {
+        return res.redirect('/admin');
+    }
     res.render('login', { err: req.query.err || null });
 });
 
@@ -146,8 +135,10 @@ app.post('/admin/login', async (req, res) => {
         const { password } = req.body;
         const isValid = await checkAdminPassword(password);
         if (isValid) {
-            res.setHeader('Set-Cookie', 'admin_auth=true; Path=/; HttpOnly');
-            res.redirect('/admin');
+            req.session.isAdmin = true;
+            req.session.save(() => {
+                res.redirect('/admin');
+            });
         } else {
             res.redirect('/admin/login?err=Incorrect Password');
         }
@@ -157,12 +148,14 @@ app.post('/admin/login', async (req, res) => {
 });
 
 app.get('/admin/logout', (req, res) => {
-    res.setHeader('Set-Cookie', 'admin_auth=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT');
-    res.redirect('/admin/login');
+    req.session.destroy(() => {
+        res.redirect('/admin/login');
+    });
 });
 
+// Admin Route Protection Middleware
 const isAdmin = (req, res, next) => {
-    if (req.cookies && req.cookies.admin_auth === 'true') {
+    if (req.session && req.session.isAdmin) {
         next();
     } else {
         res.redirect('/admin/login');
