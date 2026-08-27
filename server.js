@@ -1,5 +1,5 @@
 const express = require('express');
-const path = path = require('path');
+const path = require('path');
 const multer = require('multer');
 const session = require('express-session');
 const mongoose = require('mongoose');
@@ -277,7 +277,7 @@ app.get('/admin', isAdmin, async (req, res) => {
     }
 });
 
-// 🟢 FIX: Save Movie (isPinned, Form Array Fields, Embed Links Fix)
+// 🟢 Save Movie Action Route
 app.post('/admin/save-movie', isAdmin, upload.single('posterFile'), async (req, res) => {
     try {
         const { id, title, category, contentType, posterUrl, linkName, linkUrl, epSeason, epNum, epNumber, epName, epTitle, epUrl, isPinned } = req.body;
@@ -285,10 +285,8 @@ app.post('/admin/save-movie', isAdmin, upload.single('posterFile'), async (req, 
         let poster = posterUrl || '';
         if (req.file) poster = '/uploads/' + req.file.filename;
 
-        // Boolean Check for Checkbox
         const pinnedStatus = isPinned === 'on' || isPinned === 'true' || isPinned === true;
 
-        // Video Links Array Processing
         const videoLinks = [];
         if (Array.isArray(linkUrl)) {
             linkUrl.forEach((url, i) => {
@@ -306,7 +304,6 @@ app.post('/admin/save-movie', isAdmin, upload.single('posterFile'), async (req, 
             });
         }
 
-        // Episodes Array Processing (Form এর সম্ভাব্য নামসমূহ সাপোর্ট দেওয়া হয়েছে)
         const episodes = [];
         const seasonsInput = epSeason;
         const numbersInput = epNumber || epNum;
@@ -357,7 +354,7 @@ app.post('/admin/save-movie', isAdmin, upload.single('posterFile'), async (req, 
     }
 });
 
-// 🟢 ADDED: Toggle Pin Route (অ্যাডমিন প্যানেল থেকে সরাসরি Pin/Unpin করার জন্য)
+// 🟢 Toggle Pin Route
 app.post('/admin/toggle-pin/:id', isAdmin, async (req, res) => {
     try {
         const movie = await Movie.findById(req.params.id);
