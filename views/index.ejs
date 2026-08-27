@@ -176,7 +176,7 @@
         /* Movie Grid */
         .movie-grid {
             display: grid;
-            grid-template-columns: repeat(5, 1fr);
+            grid-template-columns: repeat(5, minmax(0, 1fr));
             gap: 20px;
             margin-bottom: 30px;
         }
@@ -379,17 +379,15 @@
         <div class="movie-grid">
             <% if (typeof movies !== 'undefined' && movies.length > 0) { %>
                 <% 
-                    let unpinnedCounter = 0; // পিন না থাকা নতুন ৩টি গণনা করার ট্র্যাকার
+                    let unpinnedCounter = 0; 
                 %>
-                <% movies.forEach(movie => { %>
+                <% movies.slice(0, 5).forEach(movie => { %>
                     <a href="/movie/<%= movie._id || movie.id %>" class="movie-card">
                         <div class="poster-wrapper">
                             <% if (movie.isPinned) { %>
-                                <!-- পিন করা কার্ডে শুধু PINNED দেখাবে -->
                                 <span class="pinned-badge">📌 PINNED</span>
                             <% } else { %>
                                 <% if (unpinnedCounter < 3) { %>
-                                    <!-- পিন ছাড়া প্রথম ৩টি কার্ডে NEW দেখাবে -->
                                     <span class="new-badge">NEW</span>
                                     <% unpinnedCounter++; %>
                                 <% } %>
@@ -405,7 +403,6 @@
                         <div class="card-footer">
                             <div class="card-title" title="<%= movie.title %>"><%= movie.title %></div>
                             <div class="card-info-row">
-                                <!-- Type Detection Logic (contentType, type, category সহ সব কিছু চেক করে) -->
                                 <span class="type-badge">
                                     <% 
                                         let rawType = (movie.contentType || movie.type || movie.category || '').toString().toLowerCase();
