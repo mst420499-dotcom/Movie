@@ -100,15 +100,19 @@ function isAdmin(req, res, next) {
 
 // ==================== PUBLIC ROUTES ====================
 
-// 🏠 HOME PAGE (FIXED TO PREVENT 500 INTERNAL SERVER ERROR)
+// 🏠 HOME PAGE (FIXED FOR index.ejs VARIABLES)
 app.get('/', async (req, res) => {
     try {
         const settings = await getSettings();
         const selectedCategory = req.query.category || '';
+        const searchQuery = (req.query.q || '').trim();
         
         let query = {};
         if (selectedCategory) {
             query.category = selectedCategory;
+        }
+        if (searchQuery) {
+            query.title = { $regex: searchQuery, $options: 'i' };
         }
 
         let movies = await Movie.find(query).sort({ isPinned: -1, createdAt: -1 }) || [];
@@ -121,10 +125,12 @@ app.get('/', async (req, res) => {
         const paginatedMovies = movies.slice(startIndex, startIndex + limit);
         const popularMovies = await Movie.find().sort({ views: -1 }).limit(5) || [];
 
-        // EJS রেন্ডারে সব ধরণের ভ্যারিয়েবল সেফলি পাস করা হচ্ছে
+        // EJS-এ যে যে ভ্যারিয়েবল চাওয়া হয়েছে (activeCat, searchQuery সহ) তা পাস করা হলো
         res.render('index', {
             categories: settings.categories || [],
             selectedCategory,
+            activeCat: selectedCategory, // index.ejs 323 লাইনের জন্য
+            searchQuery: searchQuery || '', // index.ejs 323 লাইনের জন্য
             recentMovies: paginatedMovies,
             popularMovies,
             currentPage: page,
@@ -135,13 +141,7 @@ app.get('/', async (req, res) => {
         });
     } catch (err) {
         console.error("Home Route Error:", err);
-        res.status(500).send(`
-            <div style="text-align:center; padding:50px; font-family:sans-serif;">
-                <h2>Internal Server Error</h2>
-                <p>Database connection error or view variable missing.</p>
-                <p><a href="/admin/login">Go to Admin Login</a></p>
-            </div>
-        `);
+        res.status(500).send('Server Error');
     }
 });
 
@@ -181,6 +181,7 @@ app.get('/search', async (req, res) => {
         res.render('search', {
             categories: settings.categories || [],
             searchQuery,
+            activeCat: '',
             movies: searchResults
         });
     } catch (err) {
