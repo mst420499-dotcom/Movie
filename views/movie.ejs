@@ -156,6 +156,7 @@
             let initialUrl = (movie.videoLinks && movie.videoLinks.length > 0) ? movie.videoLinks[0].url : '';
             let initialYouTubeEmbed = getYouTubeEmbedUrl(initialUrl);
             let initialIsEmbed = isGenericEmbed(initialUrl);
+            let defaultPoster = 'https://via.placeholder.com/300x400?text=No+Poster';
         %>
 
         <!-- Main Video Container -->
@@ -166,26 +167,26 @@
                 <% } else if (initialIsEmbed) { %>
                     <iframe id="embedPlayer" src="<%= initialUrl %>" allowfullscreen allow="autoplay" scrolling="no"></iframe>
                 <% } else { %>
-                    <video id="mainVideo" controls poster="<%= movie.poster %>">
+                    <video id="mainVideo" controls poster="<%= movie.poster || defaultPoster %>">
                         <source src="<%= initialUrl %>" type="video/mp4">
                         Your browser does not support the video element.
                     </video>
                 <% } %>
             </div>
 
-            <!-- Custom Controls (Direct MP4 এর ক্ষেত্রে সক্রিয় থাকবে) -->
+            <!-- Custom Controls -->
             <div class="player-controls" id="controlsBox" style="<%= (initialYouTubeEmbed || initialIsEmbed) ? 'display: none;' : '' %>">
                 <button class="control-btn" onclick="rewind(5)">⏪ 5 Sec</button>
                 <button class="control-btn" onclick="forward(5)">5 Sec ⏩</button>
             </div>
         </div>
 
-        <!-- Movie Information -->
+        <!-- Movie Details -->
         <div class="movie-details">
             <p><strong>Category:</strong> <%= movie.category %></p>
             <p><strong>Views:</strong> <%= movie.views %></p>
 
-            <!-- Server Switching Options -->
+            <!-- Server Selection -->
             <% if (movie.videoLinks && movie.videoLinks.length > 1) { %>
                 <div class="server-buttons">
                     <strong>Select Server:</strong><br><br>
@@ -205,7 +206,11 @@
                 <div class="related-grid">
                     <% relatedMovies.forEach(rel => { %>
                         <a href="/movie/<%= rel._id %>" class="related-card">
-                            <img src="<%= rel.poster %>" alt="<%= rel.title %>">
+                            <img 
+                                src="<%= rel.poster %>" 
+                                alt="<%= rel.title %>" 
+                                onerror="this.onerror=null; this.src='https://via.placeholder.com/300x400?text=No+Image';"
+                            >
                             <p><%= rel.title %></p>
                         </a>
                     <% }) %>
@@ -237,7 +242,7 @@
                 if (controlsBox) controlsBox.style.display = 'none';
             } else {
                 mediaArea.innerHTML = `
-                    <video id="mainVideo" controls autoplay poster="<%= movie.poster %>">
+                    <video id="mainVideo" controls autoplay poster="<%= movie.poster || 'https://via.placeholder.com/300x400?text=No+Poster' %>">
                         <source src="${url}" type="video/mp4">
                     </video>
                 `;
