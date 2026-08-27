@@ -19,14 +19,14 @@ if (!MONGO_URI) {
         .catch(err => console.error('❌ MongoDB Connection Error:', err));
 }
 
-// 🟢 MongoDB Schemas (Episodes & Series Support Added)
+// 🟢 MongoDB Schemas
 const movieSchema = new mongoose.Schema({
     title: String,
     category: String,
     poster: String,
-    contentType: { type: String, default: 'movie' }, // 'movie' or 'series'
+    contentType: { type: String, default: 'movie' },
     videoLinks: [{ name: String, url: String }],
-    episodes: [{                                    // Web Series এর Episode যুক্ত করার জন্য
+    episodes: [{
         season: Number,
         episodeNumber: Number,
         title: String,
@@ -95,6 +95,30 @@ function isAdmin(req, res, next) {
     res.redirect('/admin/login');
 }
 
+// 🟢 Embed URL Converter Helper (YouTube সহ সব ধরনের ভিডিও প্লে করার জন্য)
+function cleanEmbedUrl(url) {
+    if (!url) return '';
+    let clean = url.trim();
+
+    // IFRAME tag থেকে src বের করার জন্য
+    if (clean.includes('<iframe')) {
+        const match = clean.match(/src=["']([^"']+)["']/);
+        if (match && match[1]) clean = match[1];
+    }
+
+    // YouTube Normal Link to Embed URL conversion
+    if (clean.includes('youtube.com/watch?v=')) {
+        const videoId = clean.split('v=')[1].split('&')[0];
+        return `https://www.youtube.com/embed/${videoId}`;
+    }
+    if (clean.includes('youtu.be/')) {
+        const videoId = clean.split('youtu.be/')[1].split('?')[0];
+        return `https://www.youtube.com/embed/${videoId}`;
+    }
+
+    return clean;
+}
+
 // ==================== PUBLIC ROUTES ====================
 
 app.get('/', async (req, res) => {
@@ -130,6 +154,38 @@ app.get('/', async (req, res) => {
         });
     } catch (err) {
         res.status(500).send('Server Error');
+    }
+});
+
+// 🟢 FIX: Category Route (/category/Bangla%20 এরর দূর করতে)
+app.get('/category/:name', async (req, res) => {
+    try {
+        const categoryName = decodeURIComponent(req.params.name).trim();
+        const settings = await getSettings();
+
+        let allMovies = await Movie.find({ category: categoryName }).sort({ isPinned: -1, createdAt: -1 }) || [];
+
+        const limit = 6;
+        const page = parseInt(req.query.page) || 1;
+        const totalPages = Math.ceil(allMovies.length / limit) || 1;
+        const startIndex = (page - 1) * limit;
+
+        const paginatedMovies = allMovies.slice(startIndex, startIndex + limit);
+        const popularMovies = await Movie.find().sort({ views: -1 }).limit(5) || [];
+
+        res.render('index', {
+            categories: settings.categories || [],
+            selectedCategory: categoryName,
+            activeCat: categoryName,
+            searchQuery: '',
+            movies: paginatedMovies,
+            recentMovies: paginatedMovies,
+            popularMovies,
+            currentPage: page,
+            totalPages
+        });
+    } catch (err) {
+        res.status(500).send('Category Error');
     }
 });
 
@@ -221,24 +277,22 @@ app.get('/admin', isAdmin, async (req, res) => {
     }
 });
 
-// Save Movie / Series with Episodes
+// Save Movie (Clean Embed Links Applied)
 app.post('/admin/save-movie', isAdmin, upload.single('posterFile'), async (req, res) => {
     const { id, title, category, contentType, posterUrl, linkName, linkUrl, epSeason, epNumber, epTitle, epUrl, isPinned } = req.body;
 
     let poster = posterUrl || '';
     if (req.file) poster = '/uploads/' + req.file.filename;
 
-    // Standard Video Links (For Movies)
     const videoLinks = [];
     if (Array.isArray(linkUrl)) {
         linkUrl.forEach((url, i) => {
-            if (url) videoLinks.push({ name: (linkName && linkName[i]) ? linkName[i] : `Server ${i + 1}`, url });
+            if (url) videoLinks.push({ name: (linkName && linkName[i]) ? linkName[i] : `Server ${i + 1}`, url: cleanEmbedUrl(url) });
         });
     } else if (linkUrl) {
-        videoLinks.push({ name: linkName || 'Server 1', url: linkUrl });
+        videoLinks.push({ name: linkName || 'Server 1', url: cleanEmbedUrl(linkUrl) });
     }
 
-    // Web Series Episodes Handling
     const episodes = [];
     if (Array.isArray(epUrl)) {
         epUrl.forEach((url, i) => {
@@ -247,7 +301,7 @@ app.post('/admin/save-movie', isAdmin, upload.single('posterFile'), async (req, 
                     season: (epSeason && epSeason[i]) ? parseInt(epSeason[i]) : 1,
                     episodeNumber: (epNumber && epNumber[i]) ? parseInt(epNumber[i]) : (i + 1),
                     title: (epTitle && epTitle[i]) ? epTitle[i] : `Episode ${i + 1}`,
-                    url
+                    url: cleanEmbedUrl(url)
                 });
             }
         });
@@ -256,7 +310,7 @@ app.post('/admin/save-movie', isAdmin, upload.single('posterFile'), async (req, 
             season: epSeason ? parseInt(epSeason) : 1,
             episodeNumber: epNumber ? parseInt(epNumber) : 1,
             title: epTitle || 'Episode 1',
-            url: epUrl
+            url: cleanEmbedUrl(epUrl)
         });
     }
 
@@ -288,8 +342,8 @@ app.post('/admin/delete-movie/:id', isAdmin, async (req, res) => {
 
 app.post('/admin/add-category', isAdmin, async (req, res) => {
     const settings = await getSettings();
-    if (req.body.categoryName && !settings.categories.includes(req.body.categoryName)) {
-        settings.categories.push(req.body.categoryName);
+    if (req.body.categoryName && !settings.categories.includes(req.body.categoryName.trim())) {
+        settings.categories.push(req.body.categoryName.trim());
         await settings.save();
     }
     res.redirect('/admin');
