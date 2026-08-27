@@ -7,7 +7,7 @@ const mongoose = require('mongoose');
 const app = express();
 const PORT = process.env.PORT || 10000;
 
-// 🟢 Render Proxy Setup (সেশন কুকি ঠিকমতো পাস হওয়ার জন্য)
+// 🟢 Render Proxy Setup (সেশন কুকির জন্য)
 app.set('trust proxy', 1);
 
 // 🟢 MongoDB Connection (Render Environment Variable থেকে নেবে)
@@ -100,7 +100,7 @@ function isAdmin(req, res, next) {
 
 // ==================== PUBLIC ROUTES ====================
 
-// Home Page (FIXED: searchQuery ও activeCat মিসিং এরর সমাধান করা হয়েছে)
+// 🏠 Home Page (FIXED: movies, recentMovies, activeCat, searchQuery সব পাঠানো হয়েছে)
 app.get('/', async (req, res) => {
     try {
         const settings = await getSettings();
@@ -115,22 +115,23 @@ app.get('/', async (req, res) => {
             query.title = { $regex: searchQuery, $options: 'i' };
         }
 
-        let movies = await Movie.find(query).sort({ isPinned: -1, createdAt: -1 }) || [];
+        let allMovies = await Movie.find(query).sort({ isPinned: -1, createdAt: -1 }) || [];
 
         const limit = 6;
         const page = parseInt(req.query.page) || 1;
-        const totalPages = Math.ceil(movies.length / limit) || 1;
+        const totalPages = Math.ceil(allMovies.length / limit) || 1;
         const startIndex = (page - 1) * limit;
 
-        const paginatedMovies = movies.slice(startIndex, startIndex + limit);
+        const paginatedMovies = allMovies.slice(startIndex, startIndex + limit);
         const popularMovies = await Movie.find().sort({ views: -1 }).limit(5) || [];
 
         res.render('index', {
             categories: settings.categories || [],
             selectedCategory,
-            activeCat: selectedCategory, // index.ejs 323 লাইনের জন্য যুক্ত করা হয়েছে
-            searchQuery: searchQuery || '', // index.ejs 323 লাইনের জন্য যুক্ত করা হয়েছে
-            recentMovies: paginatedMovies,
+            activeCat: selectedCategory,
+            searchQuery: searchQuery || '',
+            movies: paginatedMovies,        // index.ejs line 327 এর জন্য
+            recentMovies: paginatedMovies,  // ব্যাকআপের জন্য
             popularMovies,
             currentPage: page,
             totalPages
@@ -195,7 +196,7 @@ app.get('/admin/login', (req, res) => {
     res.render('login', { error: null });
 });
 
-// Admin Login POST (FIXED: সেশন নিশ্চিতভাবে সেভ করার পর রিডাইরেক্ট)
+// Admin Login POST
 app.post('/admin/login', async (req, res) => {
     try {
         const settings = await getSettings();
