@@ -142,26 +142,34 @@
         <!-- EJS Helper Functions -->
         <% 
             function getYouTubeEmbedUrl(url) {
-                if (!url) return null;
+                if (!url || typeof url !== 'string') return null;
                 let regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
                 let match = url.match(regExp);
                 return (match && match[2].length === 11) ? 'https://www.youtube.com/embed/' + match[2] : null;
             }
 
             function isGenericEmbed(url) {
-                if (!url) return false;
-                return url.includes('/e/') || url.includes('/embed/') || url.includes('tpead.net');
+                if (!url || typeof url !== 'string') return false;
+                return url.includes('/e/') || url.includes('/embed/') || url.includes('tpead.net') || url.includes('drive.google.com') || url.includes('iframe');
             }
             
-            // Web Series Support: get default initial URL
+            // Robust initial URL extraction for both Movies & Web Series
             let initialUrl = '';
-            if (movie.seasons && movie.seasons.length > 0 && movie.seasons[0].episodes && movie.seasons[0].episodes.length > 0) {
-                let firstEp = movie.seasons[0].episodes[0];
-                initialUrl = (firstEp.videoLinks && firstEp.videoLinks.length > 0) ? firstEp.videoLinks[0].url : (firstEp.videoUrl || '');
-            } else if (movie.videoLinks && movie.videoLinks.length > 0) {
+            if (movie.videoLinks && movie.videoLinks.length > 0 && movie.videoLinks[0].url) {
                 initialUrl = movie.videoLinks[0].url;
             } else if (movie.videoUrl) {
                 initialUrl = movie.videoUrl;
+            } else if (movie.embedUrl) {
+                initialUrl = movie.embedUrl;
+            } else if (movie.seasons && movie.seasons.length > 0) {
+                let firstSeason = movie.seasons[0];
+                let firstEp = (firstSeason.episodes && firstSeason.episodes.length > 0) ? firstSeason.episodes[0] : null;
+                if (firstEp) {
+                    initialUrl = firstEp.url || firstEp.videoUrl || firstEp.embedUrl || (firstEp.videoLinks && firstEp.videoLinks[0] ? firstEp.videoLinks[0].url : '');
+                }
+            } else if (movie.episodes && movie.episodes.length > 0) {
+                let firstEp = movie.episodes[0];
+                initialUrl = firstEp.url || firstEp.videoUrl || firstEp.embedUrl || (firstEp.videoLinks && firstEp.videoLinks[0] ? firstEp.videoLinks[0].url : '');
             }
 
             let initialYouTubeEmbed = getYouTubeEmbedUrl(initialUrl);
@@ -196,42 +204,49 @@
             <p><strong>Category:</strong> <%= movie.category %></p>
             <p><strong>Views:</strong> <%= movie.views %></p>
 
-            <!-- Web Series Seasons & Episodes Selection -->
+            <!-- Web Series Support (Seasons Structure) -->
             <% if (movie.seasons && movie.seasons.length > 0) { %>
-                <div class="server-buttons" style="margin-top: 20px;">
+                <div class="server-buttons" style="margin-top: 15px;">
                     <% movie.seasons.forEach((season, sIndex) => { %>
-                        <div style="margin-bottom: 15px;">
+                        <div style="margin-bottom: 12px;">
                             <strong>Season <%= season.seasonNumber || (sIndex + 1) %>:</strong><br><br>
                             <% if (season.episodes && season.episodes.length > 0) { %>
                                 <% season.episodes.forEach((ep, eIndex) => { %>
-                                    <% 
-                                        let epLinks = JSON.stringify(ep.videoLinks || [{ name: 'Server 1', url: ep.videoUrl || '' }]); 
-                                    %>
-                                    <button class="server-btn" onclick='loadEpisode(<%- epLinks %>)'>
-                                        Ep <%= ep.episodeNumber || (eIndex + 1) %>: <%= ep.title || ('Episode ' + (eIndex + 1)) %>
+                                    <% let epUrl = ep.url || ep.videoUrl || ep.embedUrl || (ep.videoLinks && ep.videoLinks[0] ? ep.videoLinks[0].url : ''); %>
+                                    <button class="server-btn" onclick="switchVideoServer('<%= epUrl %>')">
+                                        <%= ep.title || ('Ep ' + (ep.episodeNumber || (eIndex + 1))) %>
                                     </button>
                                 <% }) %>
-                            <% } else { %>
-                                <p style="font-size: 13px; color: #888;">No episodes found in this season.</p>
                             <% } %>
                         </div>
                     <% }) %>
                 </div>
             <% } %>
 
-            <!-- Server Selection (Movie or Active Episode) -->
-            <div class="server-buttons" id="serverSelectionBox" style="<%= (movie.videoLinks && movie.videoLinks.length > 1) ? '' : 'display: none;' %>">
-                <strong>Select Server:</strong><br><br>
-                <div id="serverButtonsContainer">
-                    <% if (movie.videoLinks && movie.videoLinks.length > 1) { %>
-                        <% movie.videoLinks.forEach((link, index) => { %>
-                            <button class="server-btn" onclick="switchVideoServer('<%= link.url %>')">
-                                <%= link.name || 'Server ' + (index + 1) %>
-                            </button>
-                        <% }) %>
-                    <% } %>
+            <!-- Web Series Support (Direct Episodes Array) -->
+            <% if (movie.episodes && movie.episodes.length > 0) { %>
+                <div class="server-buttons" style="margin-top: 15px;">
+                    <strong>Episodes:</strong><br><br>
+                    <% movie.episodes.forEach((ep, eIndex) => { %>
+                        <% let epUrl = ep.url || ep.videoUrl || ep.embedUrl || (ep.videoLinks && ep.videoLinks[0] ? ep.videoLinks[0].url : ''); %>
+                        <button class="server-btn" onclick="switchVideoServer('<%= epUrl %>')">
+                            <%= ep.title || ('Episode ' + (eIndex + 1)) %>
+                        </button>
+                    <% }) %>
                 </div>
-            </div>
+            <% } %>
+
+            <!-- Movie Servers Selection -->
+            <% if (movie.videoLinks && movie.videoLinks.length > 1) { %>
+                <div class="server-buttons">
+                    <strong>Select Server:</strong><br><br>
+                    <% movie.videoLinks.forEach((link, index) => { %>
+                        <button class="server-btn" onclick="switchVideoServer('<%= link.url %>')">
+                            <%= link.name || 'Server ' + (index + 1) %>
+                        </button>
+                    <% }) %>
+                </div>
+            <% } %>
         </div>
 
         <!-- Related Content -->
@@ -257,7 +272,7 @@
     <!-- Dynamic Switching Scripts -->
     <script>
         function parseYouTubeUrl(url) {
-            if (!url) return null;
+            if (!url || typeof url !== 'string') return null;
             let regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
             let match = url.match(regExp);
             return (match && match[2].length === 11) ? match[2] : null;
@@ -269,7 +284,7 @@
             const controlsBox = document.getElementById('controlsBox');
             
             const ytId = parseYouTubeUrl(url);
-            const isEmbedLink = url.includes('/e/') || url.includes('/embed/') || url.includes('tpead.net');
+            const isEmbedLink = url.includes('/e/') || url.includes('/embed/') || url.includes('tpead.net') || url.includes('drive.google.com');
 
             if (ytId) {
                 mediaArea.innerHTML = `<iframe id="ytPlayer" src="https://www.youtube.com/embed/${ytId}?autoplay=1" allowfullscreen allow="autoplay"></iframe>`;
@@ -285,31 +300,6 @@
                     </video>
                 `;
                 if (controlsBox) controlsBox.style.display = 'flex';
-            }
-        }
-
-        function loadEpisode(links) {
-            if (!links || links.length === 0) return;
-            
-            // 1. Play first server of episode
-            switchVideoServer(links[0].url);
-
-            // 2. Render multi-server buttons for episode (if available)
-            const serverBox = document.getElementById('serverSelectionBox');
-            const container = document.getElementById('serverButtonsContainer');
-
-            if (links.length > 1) {
-                container.innerHTML = '';
-                links.forEach((link, idx) => {
-                    const btn = document.createElement('button');
-                    btn.className = 'server-btn';
-                    btn.innerText = link.name || ('Server ' + (idx + 1));
-                    btn.onclick = () => switchVideoServer(link.url);
-                    container.appendChild(btn);
-                });
-                serverBox.style.display = 'block';
-            } else {
-                serverBox.style.display = 'none';
             }
         }
 
