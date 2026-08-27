@@ -222,7 +222,7 @@
             object-fit: cover;
         }
 
-        /* Pinned Badge Style (Left Side Top) */
+        /* Pinned Badge Style */
         .pinned-badge {
             position: absolute;
             top: 10px;
@@ -238,7 +238,7 @@
             letter-spacing: 0.5px;
         }
 
-        /* NEW Badge Style (Right Side Top) */
+        /* NEW Badge Style */
         .new-badge {
             position: absolute;
             top: 10px;
@@ -352,7 +352,6 @@
     <!-- Header -->
     <header class="top-header">
         <a href="/" class="logo">MOVIE<span>HOUSE</span></a>
-        <!-- Dark / Light Theme Toggle Button -->
         <button class="theme-btn" id="themeToggle" title="Toggle Mode">🌙</button>
     </header>
 
@@ -379,17 +378,21 @@
         <h2 class="section-title">RECENTLY UPDATED</h2>
         <div class="movie-grid">
             <% if (typeof movies !== 'undefined' && movies.length > 0) { %>
-                <% movies.slice(0, 5).forEach((movie, index) => { %>
+                <% 
+                    let unpinnedCounter = 0; // পিন না থাকা নতুন ৩টি গণনা করার ট্র্যাকার
+                %>
+                <% movies.forEach(movie => { %>
                     <a href="/movie/<%= movie._id || movie.id %>" class="movie-card">
                         <div class="poster-wrapper">
-                            <!-- 📌 PINNED BADGE (PIN করা থাকলে দেখাবে) -->
                             <% if (movie.isPinned) { %>
+                                <!-- পিন করা কার্ডে শুধু PINNED দেখাবে -->
                                 <span class="pinned-badge">📌 PINNED</span>
-                            <% } %>
-
-                            <!-- 🔴 NEW BADGE (প্রথম ৩টি মুভিতে দেখাবে, পিন করা থাকলেও বা না থাকলেও) -->
-                            <% if (index < 3) { %>
-                                <span class="new-badge">NEW</span>
+                            <% } else { %>
+                                <% if (unpinnedCounter < 3) { %>
+                                    <!-- পিন ছাড়া প্রথম ৩টি কার্ডে NEW দেখাবে -->
+                                    <span class="new-badge">NEW</span>
+                                    <% unpinnedCounter++; %>
+                                <% } %>
                             <% } %>
                             
                             <img 
@@ -402,11 +405,11 @@
                         <div class="card-footer">
                             <div class="card-title" title="<%= movie.title %>"><%= movie.title %></div>
                             <div class="card-info-row">
-                                <!-- Type Badge: (web, series বা web series থাকলে WEB SERIES, অন্যথায় MOVIE) -->
+                                <!-- Type Detection Logic (contentType, type, category সহ সব কিছু চেক করে) -->
                                 <span class="type-badge">
                                     <% 
-                                        let itemCategory = (movie.category || movie.type || '').toString().toLowerCase();
-                                        if (itemCategory.includes('web') || itemCategory.includes('series')) { 
+                                        let rawType = (movie.contentType || movie.type || movie.category || '').toString().toLowerCase();
+                                        if (rawType.includes('web') || rawType.includes('series')) { 
                                     %>
                                         WEB SERIES
                                     <% } else { %>
@@ -442,7 +445,7 @@
         <h2 class="section-title">POPULAR MOVIES</h2>
         <div class="movie-grid">
             <% if (typeof popularMovies !== 'undefined' && popularMovies.length > 0) { %>
-                <% popularMovies.slice(0, 5).forEach((movie, index) => { %>
+                <% popularMovies.slice(0, 5).forEach(movie => { %>
                     <a href="/movie/<%= movie._id || movie.id %>" class="movie-card">
                         <div class="poster-wrapper">
                             <% if (movie.isPinned) { %>
@@ -461,8 +464,8 @@
                             <div class="card-info-row">
                                 <span class="type-badge">
                                     <% 
-                                        let itemCategory = (movie.category || movie.type || '').toString().toLowerCase();
-                                        if (itemCategory.includes('web') || itemCategory.includes('series')) { 
+                                        let rawType = (movie.contentType || movie.type || movie.category || '').toString().toLowerCase();
+                                        if (rawType.includes('web') || rawType.includes('series')) { 
                                     %>
                                         WEB SERIES
                                     <% } else { %>
